@@ -59,7 +59,7 @@ class MapboxBreweryMapAdapter implements BreweryMapAdapter {
 
   @override
   Future<void> recenter(UserLocation location) async {
-    if (!_isValidLocation(location)) return;
+    if (!location.isValid) return;
     _viewportController.moveTo(_cameraAt(location));
   }
 }
@@ -98,13 +98,19 @@ class _MapboxMapSurfaceState extends State<_MapboxMapSurface> {
   Uint8List? _breweryMarkerImage;
   Uint8List? _userLocationImage;
   Future<void> _pendingAnnotationUpdate = Future<void>.value();
+  Future<void> _pendingRouteUpdate = Future<void>.value();
+  final Map<String, PointAnnotation> _breweryAnnotations = {};
+  final Map<String, UserLocation> _breweryPositions = {};
+  PointAnnotation? _userLocationAnnotation;
+  UserLocation? _lastUserLocation;
+  String? _lastSelectedBreweryId;
 
   @override
   void didUpdateWidget(covariant _MapboxMapSurface oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.initialCameraLocation != widget.initialCameraLocation) {
       final location = widget.initialCameraLocation;
-      if (location != null && _isValidLocation(location)) {
+      if (location != null && location.isValid) {
         widget.viewportController.moveTo(_cameraAt(location));
       }
     }
@@ -120,6 +126,14 @@ class _MapboxMapSurfaceState extends State<_MapboxMapSurface> {
   }
 
   Future<void> _onMapCreated(MapboxMap map) async {
+    try {
+      await _initializeMap(map);
+    } on Exception catch (error, stackTrace) {
+      debugPrint('Unable to initialize Mapbox: $error\n$stackTrace');
+    }
+  }
+
+  Future<void> _initializeMap(MapboxMap map) async {
     _map = map;
 
     await map.compass.updateSettings(
@@ -177,7 +191,11 @@ class _MapboxMapSurfaceState extends State<_MapboxMapSurface> {
   }
 
   void _queueRouteUpdate() {
-    unawaited(_updateRoute());
+    _pendingRouteUpdate = _pendingRouteUpdate
+        .then((_) => _updateRoute())
+        .catchError((Object error) {
+          debugPrint('Unable to update Mapbox route: $error');
+        });
   }
 
   Future<void> _updateRoute() async {
@@ -240,41 +258,108 @@ class _MapboxMapSurfaceState extends State<_MapboxMapSurface> {
       return;
     }
 
-    final annotations = <PointAnnotationOptions>[];
     final location = widget.userLocation;
-    if (location != null && _isValidLocation(location)) {
-      annotations.add(
+    final validLocation = location != null && location.isValid
+        ? location
+        : null;
+    final desiredBreweries = <String, UserLocation>{};
+    for (final brewery in widget.breweries) {
+      final latitude = brewery.latitude;
+      final longitude = brewery.longitude;
+      if (latitude == null ||
+          longitude == null ||
+          !UserLocation.areCoordinatesValid(latitude, longitude)) {
+        continue;
+      }
+      desiredBreweries[brewery.id] = UserLocation(
+        latitude: latitude,
+        longitude: longitude,
+      );
+    }
+
+    final removedIds = _breweryAnnotations.keys
+        .where((id) => !desiredBreweries.containsKey(id))
+        .toList(growable: false);
+    if (removedIds.isNotEmpty) {
+      await manager.deleteMulti(
+        removedIds.map((id) => _breweryAnnotations[id]!).toList(),
+      );
+      for (final id in removedIds) {
+        _breweryAnnotations.remove(id);
+        _breweryPositions.remove(id);
+      }
+    }
+
+    final newBreweryIds = <String>[];
+    final newBreweryOptions = <PointAnnotationOptions>[];
+    for (final entry in desiredBreweries.entries) {
+      final id = entry.key;
+      final position = entry.value;
+      final annotation = _breweryAnnotations[id];
+      if (annotation == null) {
+        newBreweryIds.add(id);
+        newBreweryOptions.add(
+          PointAnnotationOptions(
+            geometry: _point(position.latitude, position.longitude),
+            image: breweryMarkerImage,
+            iconAnchor: IconAnchor.BOTTOM,
+            iconSize: id == widget.selectedBreweryId ? 1 : 0.8,
+            customData: {'breweryId': id},
+          ),
+        );
+        continue;
+      }
+
+      final positionChanged = !_sameLocation(_breweryPositions[id], position);
+      final selectionChanged =
+          (id == _lastSelectedBreweryId) != (id == widget.selectedBreweryId);
+      if (positionChanged || selectionChanged) {
+        annotation.geometry = _point(position.latitude, position.longitude);
+        annotation.iconSize = id == widget.selectedBreweryId ? 1 : 0.8;
+        await manager.update(annotation);
+      }
+      _breweryPositions[id] = position;
+    }
+
+    if (newBreweryOptions.isNotEmpty) {
+      final created = await manager.createMulti(newBreweryOptions);
+      for (var index = 0; index < created.length; index++) {
+        final annotation = created[index];
+        if (annotation != null) {
+          final id = newBreweryIds[index];
+          _breweryAnnotations[id] = annotation;
+          _breweryPositions[id] = desiredBreweries[id]!;
+        }
+      }
+    }
+
+    if (validLocation == null) {
+      final annotation = _userLocationAnnotation;
+      if (annotation != null) await manager.delete(annotation);
+      _userLocationAnnotation = null;
+      _lastUserLocation = null;
+    } else if (_userLocationAnnotation == null) {
+      _userLocationAnnotation = await manager.create(
         PointAnnotationOptions(
-          geometry: _point(location.latitude, location.longitude),
+          geometry: _point(validLocation.latitude, validLocation.longitude),
           image: userLocationImage,
           iconAnchor: IconAnchor.CENTER,
           iconSize: 1,
           customData: const {'userLocation': true},
         ),
       );
-    }
-    for (final brewery in widget.breweries) {
-      final latitude = brewery.latitude;
-      final longitude = brewery.longitude;
-      if (latitude == null ||
-          longitude == null ||
-          !_isValidCoordinates(latitude, longitude)) {
-        continue;
-      }
-      final isSelected = brewery.id == widget.selectedBreweryId;
-      annotations.add(
-        PointAnnotationOptions(
-          geometry: _point(latitude, longitude),
-          image: breweryMarkerImage,
-          iconAnchor: IconAnchor.BOTTOM,
-          iconSize: isSelected ? 1 : 0.8,
-          customData: {'breweryId': brewery.id},
-        ),
+      _lastUserLocation = validLocation;
+    } else if (!_sameLocation(_lastUserLocation, validLocation)) {
+      final annotation = _userLocationAnnotation!;
+      annotation.geometry = _point(
+        validLocation.latitude,
+        validLocation.longitude,
       );
+      await manager.update(annotation);
+      _lastUserLocation = validLocation;
     }
 
-    await manager.deleteAll();
-    if (annotations.isNotEmpty) await manager.createMulti(annotations);
+    _lastSelectedBreweryId = widget.selectedBreweryId;
   }
 
   @override
@@ -311,13 +396,6 @@ Future<Uint8List> _loadMapIcon(String assetPath) async {
 Point _point(double latitude, double longitude) =>
     Point(coordinates: Position(longitude, latitude));
 
-bool _isValidLocation(UserLocation location) =>
-    _isValidCoordinates(location.latitude, location.longitude);
-
-bool _isValidCoordinates(double latitude, double longitude) =>
-    latitude.isFinite &&
-    longitude.isFinite &&
-    latitude >= -90 &&
-    latitude <= 90 &&
-    longitude >= -180 &&
-    longitude <= 180;
+bool _sameLocation(UserLocation? first, UserLocation? second) =>
+    first?.latitude == second?.latitude &&
+    first?.longitude == second?.longitude;

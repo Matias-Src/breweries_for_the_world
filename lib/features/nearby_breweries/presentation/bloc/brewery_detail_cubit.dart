@@ -80,10 +80,10 @@ class BreweryDetailCubit extends Cubit<BreweryDetailState> {
     final location = userLocation;
     return mapRoute != null &&
         location != null &&
-        _isValidCoordinates(location.latitude, location.longitude) &&
+        location.isValid &&
         latitude != null &&
         longitude != null &&
-        _isValidCoordinates(latitude, longitude);
+        UserLocation.areCoordinatesValid(latitude, longitude);
   }
 
   Future<void> load() async {
@@ -166,11 +166,3 @@ class BreweryDetailCubit extends Cubit<BreweryDetailState> {
     await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 }
-
-bool _isValidCoordinates(double latitude, double longitude) =>
-    latitude.isFinite &&
-    longitude.isFinite &&
-    latitude >= -90 &&
-    latitude <= 90 &&
-    longitude >= -180 &&
-    longitude <= 180;

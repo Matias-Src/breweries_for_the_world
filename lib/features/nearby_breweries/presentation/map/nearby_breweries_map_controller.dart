@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
+
 import '../../domain/entities/brewery.dart';
 import '../../domain/entities/user_location.dart';
 import '../bloc/nearby_breweries_bloc.dart';
@@ -50,13 +52,11 @@ class NearbyBreweriesMapController {
     final longitude = brewery.longitude;
     if (latitude == null ||
         longitude == null ||
-        !_isValidCoordinates(latitude, longitude)) {
+        !UserLocation.areCoordinatesValid(latitude, longitude)) {
       return;
     }
     unawaited(
-      _mapAdapter.recenter(
-        UserLocation(latitude: latitude, longitude: longitude),
-      ),
+      _recenterSafely(UserLocation(latitude: latitude, longitude: longitude)),
     );
   }
 
@@ -79,30 +79,23 @@ class NearbyBreweriesMapController {
   }
 
   void recenterOnUserLocation(NearbyBreweriesState state) {
-    final location = switch (state) {
-      NearbyBreweriesSuccess(:final location) => location,
-      NearbyBreweriesEmpty(:final location) => location,
-      _ => null,
-    };
-    if (location != null && _isValidLocation(location)) {
-      unawaited(_mapAdapter.recenter(location));
+    final location = state.location;
+    if (location != null && location.isValid) {
+      unawaited(_recenterSafely(location));
     }
   }
 
   void recenter(UserLocation location) {
-    if (_isValidLocation(location)) {
-      unawaited(_mapAdapter.recenter(location));
+    if (location.isValid) {
+      unawaited(_recenterSafely(location));
+    }
+  }
+
+  Future<void> _recenterSafely(UserLocation location) async {
+    try {
+      await _mapAdapter.recenter(location);
+    } on Exception catch (error, stackTrace) {
+      debugPrint('Unable to recenter Mapbox: $error\n$stackTrace');
     }
   }
 }
-
-bool _isValidLocation(UserLocation location) =>
-    _isValidCoordinates(location.latitude, location.longitude);
-
-bool _isValidCoordinates(double latitude, double longitude) =>
-    latitude.isFinite &&
-    longitude.isFinite &&
-    latitude >= -90 &&
-    latitude <= 90 &&
-    longitude >= -180 &&
-    longitude <= 180;

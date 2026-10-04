@@ -5,6 +5,7 @@ import '../../../../core/l10n/app_localizations.dart';
 import '../../domain/entities/brewery.dart';
 import '../../domain/entities/brewery_route.dart';
 import '../../domain/entities/route_mode.dart';
+import '../../domain/entities/user_location.dart';
 import '../bloc/brewery_detail_cubit.dart';
 import '../formatters/brewery_address_formatter.dart';
 import '../map/brewery_map_adapter.dart';
@@ -318,13 +319,5 @@ bool _hasValidCoordinates(Brewery brewery) {
   final longitude = brewery.longitude;
   return latitude != null &&
       longitude != null &&
-      _isValidCoordinates(latitude, longitude);
+      UserLocation.areCoordinatesValid(latitude, longitude);
 }
-
-bool _isValidCoordinates(double latitude, double longitude) =>
-    latitude.isFinite &&
-    longitude.isFinite &&
-    latitude >= -90 &&
-    latitude <= 90 &&
-    longitude >= -180 &&
-    longitude <= 180;
