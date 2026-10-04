@@ -162,7 +162,13 @@ void main() {
           latitude: latitude,
           longitude: longitude,
         ),
-        throwsA(isA<ServerException>()),
+        throwsA(
+          isA<ServerException>().having(
+            (exception) => exception.statusCode,
+            'status code',
+            503,
+          ),
+        ),
       );
     });
 

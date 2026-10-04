@@ -27,13 +27,17 @@ class MapboxDirectionsRepositoryImpl implements BreweryRouteRepository {
         mode: mode,
       );
     } on DioException catch (exception) {
-      if (exception.response != null) {
+      final response = exception.response;
+      if (response != null) {
         throw ServerException(
           exception.message ?? 'The directions service returned an error.',
+          response.statusCode,
+          exception,
         );
       }
       throw NetworkException(
         exception.message ?? 'Could not reach the directions service.',
+        exception,
       );
     } on FormatException catch (exception) {
       throw ParsingException(exception.message);

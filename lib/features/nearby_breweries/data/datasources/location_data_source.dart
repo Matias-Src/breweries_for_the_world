@@ -17,30 +17,36 @@ class LocationDataSourceImpl implements LocationDataSource {
 
   @override
   Future<UserLocation> getCurrentLocation() async {
-    if (!await _geolocatorPlatform.isLocationServiceEnabled()) {
-      throw const LocationServiceDisabledException();
-    }
-
-    var permission = await _geolocatorPlatform.checkPermission();
-    if (permission == geo.LocationPermission.denied ||
-        permission == geo.LocationPermission.unableToDetermine) {
-      permission = await _geolocatorPlatform.requestPermission();
-    }
-
-    if (permission == geo.LocationPermission.deniedForever) {
-      throw const LocationPermissionDeniedException(permanentlyDenied: true);
-    }
-    if (permission == geo.LocationPermission.denied ||
-        permission == geo.LocationPermission.unableToDetermine) {
-      throw const LocationPermissionDeniedException();
-    }
-
     try {
+      if (!await _geolocatorPlatform.isLocationServiceEnabled()) {
+        throw const LocationServiceDisabledException();
+      }
+
+      var permission = await _geolocatorPlatform.checkPermission();
+      if (permission == geo.LocationPermission.denied ||
+          permission == geo.LocationPermission.unableToDetermine) {
+        permission = await _geolocatorPlatform.requestPermission();
+      }
+
+      if (permission == geo.LocationPermission.deniedForever) {
+        throw const LocationPermissionDeniedException(permanentlyDenied: true);
+      }
+      if (permission == geo.LocationPermission.denied ||
+          permission == geo.LocationPermission.unableToDetermine) {
+        throw const LocationPermissionDeniedException();
+      }
+
       final position = await _geolocatorPlatform.getCurrentPosition();
       return UserLocation(
         latitude: position.latitude,
         longitude: position.longitude,
       );
+    } on LocationPermissionDeniedException {
+      rethrow;
+    } on LocationServiceDisabledException {
+      rethrow;
+    } on LocationUnavailableException {
+      rethrow;
     } on geo.PermissionDeniedException {
       throw const LocationPermissionDeniedException();
     } on geo.LocationServiceDisabledException {

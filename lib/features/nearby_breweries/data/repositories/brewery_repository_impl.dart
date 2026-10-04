@@ -20,14 +20,7 @@ class BreweryRepositoryImpl implements BreweryRepository {
       final brewery = await _remoteDataSource.getBreweryById(id: id);
       return brewery.toEntity();
     } on DioException catch (exception) {
-      if (exception.response != null) {
-        throw ServerException(
-          exception.message ?? 'The brewery service returned an error.',
-        );
-      }
-      throw NetworkException(
-        exception.message ?? 'Could not reach the server.',
-      );
+      throw _mapDioException(exception);
     } on FormatException catch (exception) {
       throw ParsingException(exception.message);
     }
@@ -45,14 +38,7 @@ class BreweryRepositoryImpl implements BreweryRepository {
       );
       return breweries.map((brewery) => brewery.toEntity()).toList();
     } on DioException catch (exception) {
-      if (exception.response != null) {
-        throw ServerException(
-          exception.message ?? 'The brewery service returned an error.',
-        );
-      }
-      throw NetworkException(
-        exception.message ?? 'Could not reach the server.',
-      );
+      throw _mapDioException(exception);
     } on FormatException catch (exception) {
       throw ParsingException(exception.message);
     }
@@ -83,14 +69,7 @@ class BreweryRepositoryImpl implements BreweryRepository {
           )
           .toList();
     } on DioException catch (exception) {
-      if (exception.response != null) {
-        throw ServerException(
-          exception.message ?? 'The brewery service returned an error.',
-        );
-      }
-      throw NetworkException(
-        exception.message ?? 'Could not reach the server.',
-      );
+      throw _mapDioException(exception);
     } on FormatException catch (exception) {
       throw ParsingException(exception.message);
     }
@@ -102,16 +81,24 @@ class BreweryRepositoryImpl implements BreweryRepository {
       final breweries = await _remoteDataSource.searchBreweries(query: query);
       return breweries.map((brewery) => brewery.toEntity()).toList();
     } on DioException catch (exception) {
-      if (exception.response != null) {
-        throw ServerException(
-          exception.message ?? 'The brewery service returned an error.',
-        );
-      }
-      throw NetworkException(
-        exception.message ?? 'Could not reach the server.',
-      );
+      throw _mapDioException(exception);
     } on FormatException catch (exception) {
       throw ParsingException(exception.message);
     }
   }
+}
+
+Exception _mapDioException(DioException exception) {
+  final response = exception.response;
+  if (response != null) {
+    return ServerException(
+      exception.message ?? 'The brewery service returned an error.',
+      response.statusCode,
+      exception,
+    );
+  }
+  return NetworkException(
+    exception.message ?? 'Could not reach the server.',
+    exception,
+  );
 }

@@ -2,7 +2,9 @@ import 'package:breweries_for_the_world/features/nearby_breweries/data/datasourc
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/entities/user_location.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/errors/location_permission_denied_exception.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/errors/location_service_disabled_exception.dart';
+import 'package:breweries_for_the_world/features/nearby_breweries/domain/errors/location_unavailable_exception.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart'
     hide LocationServiceDisabledException;
 import 'package:mocktail/mocktail.dart';
@@ -125,6 +127,23 @@ void main() {
     expect(location.longitude, 11.327765);
     verifyNever(() => platform.requestPermission());
   });
+
+  test(
+    'maps platform errors during permission checks to a typed exception',
+    () async {
+      when(
+        () => platform.isLocationServiceEnabled(),
+      ).thenAnswer((_) async => true);
+      when(
+        () => platform.checkPermission(),
+      ).thenThrow(PlatformException(code: 'permission_check_failed'));
+
+      await expectLater(
+        dataSource.getCurrentLocation(),
+        throwsA(isA<LocationUnavailableException>()),
+      );
+    },
+  );
 }
 
 Position _position() => Position(
