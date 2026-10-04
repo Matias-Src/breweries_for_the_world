@@ -13,6 +13,7 @@ abstract interface class BreweryRemoteDataSource {
   Future<List<BreweryDto>> getNearestBreweries({
     required double latitude,
     required double longitude,
+    int page = 1,
     required int limit,
   });
 
@@ -50,11 +51,16 @@ class BreweryRemoteDataSourceImpl implements BreweryRemoteDataSource {
   Future<List<BreweryDto>> getNearestBreweries({
     required double latitude,
     required double longitude,
+    int page = 1,
     required int limit,
   }) async {
     final response = await _dio.get<List<dynamic>>(
       '/breweries',
-      queryParameters: {'by_dist': '$latitude,$longitude', 'per_page': limit},
+      queryParameters: {
+        'by_dist': '$latitude,$longitude',
+        'page': page,
+        'per_page': limit,
+      },
     );
     return _parseBreweries(response.data);
   }

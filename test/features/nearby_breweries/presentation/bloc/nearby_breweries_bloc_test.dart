@@ -63,6 +63,77 @@ void main() {
   );
 
   blocTest<NearbyBreweriesBloc, NearbyBreweriesState>(
+    'appends the next page of nearby breweries when requested',
+    setUp: () {
+      when(
+        () => repository.getNearestBreweries(
+          latitude: latitude,
+          longitude: longitude,
+          limit: 40,
+          page: 1,
+        ),
+      ).thenAnswer(
+        (_) async => List.generate(
+          40,
+          (index) => Brewery(
+            id: 'page-one-$index',
+            name: 'Page one brewery $index',
+            breweryType: 'micro',
+          ),
+        ),
+      );
+      when(
+        () => repository.getNearestBreweries(
+          latitude: latitude,
+          longitude: longitude,
+          limit: 40,
+          page: 2,
+        ),
+      ).thenAnswer(
+        (_) async => [
+          const Brewery(
+            id: 'page-two-1',
+            name: 'Page two brewery',
+            breweryType: 'micro',
+          ),
+        ],
+      );
+    },
+    build: () => NearbyBreweriesBloc(getNearestBreweries: getNearestBreweries),
+    act: (bloc) async {
+      bloc.add(
+        const LocationRequested(latitude: latitude, longitude: longitude),
+      );
+      await Future<void>.delayed(Duration.zero);
+      bloc.add(const NearbyBreweriesNextPageRequested());
+    },
+    expect: () => [
+      isA<NearbyBreweriesLoading>(),
+      isA<NearbyBreweriesSuccess>().having(
+        (state) => state.breweries,
+        'initial page',
+        hasLength(40),
+      ),
+      isA<NearbyBreweriesLoading>(),
+      isA<NearbyBreweriesSuccess>().having(
+        (state) => state.breweries,
+        'appended pages',
+        hasLength(41),
+      ),
+    ],
+    verify: (_) {
+      verify(
+        () => repository.getNearestBreweries(
+          latitude: latitude,
+          longitude: longitude,
+          limit: 40,
+          page: 2,
+        ),
+      ).called(1);
+    },
+  );
+
+  blocTest<NearbyBreweriesBloc, NearbyBreweriesState>(
     'emits Loading then Empty when there are no nearby breweries',
     setUp: () {
       when(

@@ -21,7 +21,12 @@ class NearbyBreweriesBloc
        _searchBreweries = searchBreweries,
        super(const NearbyBreweriesInitial()) {
     on<LocationRequested>(_onLocationRequested);
+    on<LocationRefreshRequested>(
+      _onLocationRefreshRequested,
+      transformer: droppable(),
+    );
     on<RetryRequested>(_onRetryRequested);
+    on<NearbyBreweriesNextPageRequested>(_onNextPageRequested);
     on<SearchQueryChanged>(_onSearchQueryChanged, transformer: restartable());
     on<BreweryTypesChanged>(_onBreweryTypesChanged);
     on<FiltersCleared>(_onFiltersCleared);
@@ -39,10 +44,16 @@ class NearbyBreweriesBloc
   UserLocation? _location;
   bool _searchActive = false;
   bool _hasLoadedResults = false;
+  int _nearbyPage = 0;
+  bool _hasMoreNearby = true;
+  bool _isLoadingNextPage = false;
+  bool _nextPageFailed = false;
   int _searchRequestId = 0;
   String? _selectedBreweryId;
   String? _activeSearchQuery;
   LocationRequested? _lastLocationRequest;
+  bool _isRefreshingLocation = false;
+  Object? _locationRefreshError;
 
   Future<void> _onLocationRequested(
     LocationRequested event,
@@ -53,6 +64,35 @@ class NearbyBreweriesBloc
     return _loadBreweries(event, emit);
   }
 
+  Future<void> _onLocationRefreshRequested(
+    LocationRefreshRequested event,
+    Emitter<NearbyBreweriesState> emit,
+  ) async {
+    final getCurrentLocation = _getCurrentLocation;
+    if (getCurrentLocation == null) {
+      _locationRefreshError = const LocationUnavailableException(
+        'A location provider has not been configured.',
+      );
+      _emitCurrentResults(emit);
+      return;
+    }
+
+    _isRefreshingLocation = true;
+    _locationRefreshError = null;
+    _emitCurrentResults(emit);
+    try {
+      final location = await getCurrentLocation();
+      if (!location.isValid) throw const LocationUnavailableException();
+      _location = location;
+      _isRefreshingLocation = false;
+      _emitCurrentResults(emit);
+    } on Exception catch (exception) {
+      _isRefreshingLocation = false;
+      _locationRefreshError = exception;
+      _emitCurrentResults(emit);
+    }
+  }
+
   Future<void> _onRetryRequested(
     RetryRequested event,
     Emitter<NearbyBreweriesState> emit,
@@ -60,6 +100,12 @@ class NearbyBreweriesBloc
     final query = _activeSearchQuery;
     if (query != null) {
       return _onSearchQueryChanged(SearchQueryChanged(query), emit);
+    }
+    if (_nextPageFailed) {
+      return _onNextPageRequested(
+        const NearbyBreweriesNextPageRequested(),
+        emit,
+      );
     }
     return _loadBreweries(
       _lastLocationRequest ?? const LocationRequested(),
@@ -77,15 +123,63 @@ class NearbyBreweriesBloc
       final breweries = await _getNearestBreweries(
         latitude: location.latitude,
         longitude: location.longitude,
+        page: 1,
       );
       _location = location;
       _nearbyBreweries = breweries;
+      _nearbyPage = 1;
+      _hasMoreNearby = breweries.length == 40;
+      _isLoadingNextPage = false;
+      _nextPageFailed = false;
       _searchActive = false;
       _activeSearchQuery = null;
       _hasLoadedResults = true;
       _emitResults(breweries, emit, location: location);
     } on Exception catch (exception) {
       _emitError(exception, emit);
+    }
+  }
+
+  Future<void> _onNextPageRequested(
+    NearbyBreweriesNextPageRequested event,
+    Emitter<NearbyBreweriesState> emit,
+  ) async {
+    final location = _location;
+    if (_searchActive ||
+        _activeSearchQuery != null ||
+        location == null ||
+        !_hasLoadedResults ||
+        !_hasMoreNearby ||
+        _isLoadingNextPage ||
+        _nearbyPage == 0) {
+      return;
+    }
+
+    _isLoadingNextPage = true;
+    _emitLoading(emit);
+    try {
+      final nextPage = _nearbyPage + 1;
+      final breweries = await _getNearestBreweries(
+        latitude: location.latitude,
+        longitude: location.longitude,
+        page: nextPage,
+      );
+      _nearbyPage = nextPage;
+      _hasMoreNearby = breweries.length == 40;
+      _nearbyBreweries = [
+        ..._nearbyBreweries,
+        ...breweries.where(
+          (brewery) =>
+              !_nearbyBreweries.any((existing) => existing.id == brewery.id),
+        ),
+      ];
+      _nextPageFailed = false;
+      _emitResults(_nearbyBreweries, emit, location: location);
+    } on Exception catch (exception) {
+      _nextPageFailed = true;
+      _emitError(exception, emit);
+    } finally {
+      _isLoadingNextPage = false;
     }
   }
 
@@ -118,6 +212,8 @@ class NearbyBreweriesBloc
           location: _location,
           activeTypes: Set.unmodifiable(_activeTypes),
           selectedBreweryId: _selectedBreweryId,
+          isRefreshingLocation: _isRefreshingLocation,
+          locationRefreshError: _locationRefreshError,
         ),
       );
       return;
@@ -193,7 +289,14 @@ class NearbyBreweriesBloc
     final activeTypes = Set<String>.unmodifiable(_activeTypes);
 
     if (visibleBreweries.isEmpty) {
-      emit(NearbyBreweriesEmpty(location: location, activeTypes: activeTypes));
+      emit(
+        NearbyBreweriesEmpty(
+          location: location,
+          activeTypes: activeTypes,
+          isRefreshingLocation: _isRefreshingLocation,
+          locationRefreshError: _locationRefreshError,
+        ),
+      );
     } else {
       emit(
         NearbyBreweriesSuccess(
@@ -206,6 +309,8 @@ class NearbyBreweriesBloc
               )
               ? _selectedBreweryId
               : null,
+          isRefreshingLocation: _isRefreshingLocation,
+          locationRefreshError: _locationRefreshError,
         ),
       );
     }
@@ -216,6 +321,8 @@ class NearbyBreweriesBloc
     location: _location,
     activeTypes: Set.unmodifiable(_activeTypes),
     selectedBreweryId: _selectedBreweryId,
+    isRefreshingLocation: _isRefreshingLocation,
+    locationRefreshError: _locationRefreshError,
   );
 
   void _emitLoading(Emitter<NearbyBreweriesState> emit) {
@@ -247,6 +354,8 @@ class NearbyBreweriesBloc
         location: _location,
         activeTypes: Set.unmodifiable(_activeTypes),
         selectedBreweryId: _selectedBreweryId,
+        isRefreshingLocation: _isRefreshingLocation,
+        locationRefreshError: _locationRefreshError,
       ),
     );
   }

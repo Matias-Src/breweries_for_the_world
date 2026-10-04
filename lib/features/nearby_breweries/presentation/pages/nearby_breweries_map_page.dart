@@ -50,7 +50,27 @@ class NearbyBreweriesMapPage extends StatelessWidget {
     final labels = _NearbyBreweriesLabels.of(context);
     return Scaffold(
       drawer: _buildDrawer(context, labels),
-      body: BlocBuilder<NearbyBreweriesBloc, NearbyBreweriesState>(
+      body: BlocConsumer<NearbyBreweriesBloc, NearbyBreweriesState>(
+        listenWhen: (previous, current) =>
+            previous.locationRefreshError == null &&
+            current.locationRefreshError != null,
+        listener: (context, state) {
+          final error = state.locationRefreshError;
+          if (error == null) return;
+          ScaffoldMessenger.of(context)
+            ..hideCurrentSnackBar()
+            ..showSnackBar(
+              SnackBar(
+                content: Text(
+                  _locationRefreshErrorMessage(
+                    context,
+                    error,
+                    hasLastKnownLocation: state.location?.isValid ?? false,
+                  ),
+                ),
+              ),
+            );
+        },
         builder: (context, state) {
           final location = state.location;
           final breweries = state.breweries;
@@ -138,6 +158,7 @@ class NearbyBreweriesMapPage extends StatelessWidget {
                   ),
                 if (hasCarousel)
                   Positioned(
+                    key: const ValueKey('nearby-breweries-carousel-position'),
                     left: 0,
                     right: 0,
                     bottom: 8,
@@ -147,21 +168,34 @@ class NearbyBreweriesMapPage extends StatelessWidget {
                         breweries: breweries,
                         selectedBreweryId: state.selectedBreweryId,
                         onSelected: mapController.selectBrewery,
+                        onLoadMore: () => context
+                            .read<NearbyBreweriesBloc>()
+                            .add(const NearbyBreweriesNextPageRequested()),
                         onDetails: (brewery) =>
                             onOpenBreweryDetails(brewery, location),
                       ),
                     ),
                   ),
-                if (location != null && location.isValid)
-                  Positioned(
-                    right: 16,
-                    bottom: hasCarousel ? 230 : 24,
-                    child: FloatingActionButton(
-                      tooltip: labels.myLocation,
-                      onPressed: () => mapController.recenter(location),
-                      child: const Icon(Icons.my_location),
-                    ),
+                Positioned(
+                  right: 16,
+                  bottom: hasCarousel ? 230 : 24,
+                  child: FloatingActionButton(
+                    tooltip: state.isRefreshingLocation
+                        ? labels.updatingLocation
+                        : labels.myLocation,
+                    onPressed: mapController.refreshLocation,
+                    child: state.isRefreshingLocation
+                        ? SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Theme.of(context).colorScheme.onPrimary,
+                            ),
+                          )
+                        : const Icon(Icons.my_location),
                   ),
+                ),
               ],
             ),
           );
@@ -311,6 +345,22 @@ String _errorMessage(BuildContext context, NearbyBreweriesError state) {
   return state.isSearchError ? l10n.searchError : l10n.mapLoadError;
 }
 
+String _locationRefreshErrorMessage(
+  BuildContext context,
+  Object error, {
+  required bool hasLastKnownLocation,
+}) {
+  final l10n = AppLocalizations.of(context)!;
+  if (hasLastKnownLocation) return l10n.locationUsingLastKnown;
+  if (error is LocationPermissionDeniedException) {
+    return l10n.locationPermissionDenied;
+  }
+  if (error is LocationServiceDisabledException) {
+    return l10n.locationServiceDisabled;
+  }
+  return l10n.locationUnavailable;
+}
+
 class _MapErrorNotice extends StatelessWidget {
   const _MapErrorNotice({
     required this.message,
@@ -422,6 +472,7 @@ class _BreweryCarousel extends StatefulWidget {
     required this.breweries,
     required this.selectedBreweryId,
     required this.onSelected,
+    required this.onLoadMore,
     required this.onDetails,
   });
 
@@ -430,6 +481,7 @@ class _BreweryCarousel extends StatefulWidget {
   final List<Brewery> breweries;
   final String? selectedBreweryId;
   final ValueChanged<Brewery> onSelected;
+  final VoidCallback onLoadMore;
   final ValueChanged<Brewery> onDetails;
 
   @override
@@ -438,6 +490,12 @@ class _BreweryCarousel extends StatefulWidget {
 
 class _BreweryCarouselState extends State<_BreweryCarousel> {
   final ScrollController _controller = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(_handleScroll);
+  }
 
   @override
   void didUpdateWidget(covariant _BreweryCarousel oldWidget) {
@@ -469,6 +527,13 @@ class _BreweryCarouselState extends State<_BreweryCarousel> {
       duration: const Duration(milliseconds: 280),
       curve: Curves.easeOut,
     );
+  }
+
+  void _handleScroll() {
+    if (_controller.hasClients &&
+        _controller.position.extentAfter <= _BreweryCarousel._cardExtent) {
+      widget.onLoadMore();
+    }
   }
 
   @override
@@ -606,6 +671,7 @@ class _NearbyBreweriesLabels {
   String get clearSearch => l10n.clearSearch;
   String get moreDetails => l10n.moreDetails;
   String get myLocation => l10n.myLocation;
+  String get updatingLocation => l10n.updatingLocation;
 }
 
 bool _hasText(String? value) => value != null && value.trim().isNotEmpty;

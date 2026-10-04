@@ -9,10 +9,12 @@ class GetNearestBreweries {
   Future<List<Brewery>> call({
     required double latitude,
     required double longitude,
+    int page = 1,
   }) {
     return _repository.getNearestBreweries(
       latitude: latitude,
       longitude: longitude,
+      page: page,
       limit: 40,
     );
   }

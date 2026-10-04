@@ -18,6 +18,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get myLocation => 'My location';
 
   @override
+  String get updatingLocation => 'Updating location';
+
+  @override
   String get searchBreweriesHint => 'Search breweries';
 
   @override
@@ -40,6 +43,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get locationUnavailable => 'Location unavailable';
+
+  @override
+  String get locationUsingLastKnown =>
+      'Could not update location. Showing the last known position.';
 
   @override
   String get calculatingRoute => 'Calculating route...';

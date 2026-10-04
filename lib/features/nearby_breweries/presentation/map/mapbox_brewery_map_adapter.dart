@@ -12,6 +12,8 @@ import 'initial_map_camera.dart';
 
 class MapboxBreweryMapAdapter implements BreweryMapAdapter {
   final ViewportController _viewportController = ViewportController();
+  MapboxMap? _nearbyMap;
+  UserLocation? _pendingRecenterLocation;
 
   @override
   Widget buildMap({
@@ -27,6 +29,8 @@ class MapboxBreweryMapAdapter implements BreweryMapAdapter {
     breweries: breweries,
     selectedBreweryId: selectedBreweryId,
     onBrewerySelected: onBrewerySelected,
+    onMapReady: _onNearbyMapReady,
+    onMapDisposed: _onNearbyMapDisposed,
     viewportController: _viewportController,
   );
 
@@ -60,7 +64,26 @@ class MapboxBreweryMapAdapter implements BreweryMapAdapter {
   @override
   Future<void> recenter(UserLocation location) async {
     if (!location.isValid) return;
-    _viewportController.moveTo(_cameraAt(location));
+    final map = _nearbyMap;
+    if (map == null) {
+      _pendingRecenterLocation = location;
+      _viewportController.moveTo(_cameraAt(location));
+      return;
+    }
+    await _moveMapToLocation(map, location);
+  }
+
+  void _onNearbyMapReady(MapboxMap map) {
+    _nearbyMap = map;
+    final pendingLocation = _pendingRecenterLocation;
+    _pendingRecenterLocation = null;
+    if (pendingLocation != null) {
+      unawaited(_moveMapToLocation(map, pendingLocation));
+    }
+  }
+
+  void _onNearbyMapDisposed(MapboxMap map) {
+    if (identical(_nearbyMap, map)) _nearbyMap = null;
   }
 }
 
@@ -74,6 +97,8 @@ class _MapboxMapSurface extends StatefulWidget {
     this.route,
     this.routeBottomInset = 0,
     required this.onBrewerySelected,
+    this.onMapReady,
+    this.onMapDisposed,
     required this.viewportController,
   });
 
@@ -84,6 +109,8 @@ class _MapboxMapSurface extends StatefulWidget {
   final BreweryRoute? route;
   final double routeBottomInset;
   final ValueChanged<String> onBrewerySelected;
+  final ValueChanged<MapboxMap>? onMapReady;
+  final ValueChanged<MapboxMap>? onMapDisposed;
   final ViewportController viewportController;
 
   @override
@@ -135,6 +162,7 @@ class _MapboxMapSurfaceState extends State<_MapboxMapSurface> {
 
   Future<void> _initializeMap(MapboxMap map) async {
     _map = map;
+    widget.onMapReady?.call(map);
 
     await map.compass.updateSettings(
       CompassSettings(
@@ -365,6 +393,8 @@ class _MapboxMapSurfaceState extends State<_MapboxMapSurface> {
   @override
   void dispose() {
     _annotationTapEvents?.cancel();
+    final map = _map;
+    if (map != null) widget.onMapDisposed?.call(map);
     super.dispose();
   }
 
@@ -387,6 +417,15 @@ CameraViewportState _cameraAt(UserLocation location) => CameraViewportState(
   center: _point(location.latitude, location.longitude),
   zoom: InitialMapCamera.locationZoom,
 );
+
+Future<void> _moveMapToLocation(MapboxMap map, UserLocation location) =>
+    map.flyTo(
+      CameraOptions(
+        center: _point(location.latitude, location.longitude),
+        zoom: InitialMapCamera.locationZoom,
+      ),
+      MapAnimationOptions(duration: 700),
+    );
 
 Future<Uint8List> _loadMapIcon(String assetPath) async {
   final data = await rootBundle.load(assetPath);

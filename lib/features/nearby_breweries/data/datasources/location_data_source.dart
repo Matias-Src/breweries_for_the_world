@@ -36,7 +36,12 @@ class LocationDataSourceImpl implements LocationDataSource {
         throw const LocationPermissionDeniedException();
       }
 
-      final position = await _geolocatorPlatform.getCurrentPosition();
+      final position = await _geolocatorPlatform.getCurrentPosition(
+        locationSettings: const geo.LocationSettings(
+          accuracy: geo.LocationAccuracy.medium,
+          timeLimit: Duration(seconds: 8),
+        ),
+      );
       return UserLocation(
         latitude: position.latitude,
         longitude: position.longitude,

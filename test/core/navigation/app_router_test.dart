@@ -118,6 +118,7 @@ class _RouteTestRepository implements BreweryRepository {
   Future<List<Brewery>> getNearestBreweries({
     required double latitude,
     required double longitude,
+    int page = 1,
     int limit = 40,
   }) async => [];
 

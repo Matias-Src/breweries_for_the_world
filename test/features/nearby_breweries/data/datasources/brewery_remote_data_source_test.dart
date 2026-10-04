@@ -43,6 +43,7 @@ void main() {
       final breweries = await dataSource.getNearestBreweries(
         latitude: 50.241246,
         longitude: 11.327765,
+        page: 2,
         limit: 40,
       );
 
@@ -52,8 +53,10 @@ void main() {
       expect(request!.method, 'GET');
       expect(request.path, '/breweries');
       expect(request.queryParameters['by_dist'], '50.241246,11.327765');
+      expect(request.queryParameters['page'], 2);
       expect(request.queryParameters['per_page'], 40);
       expect(request.uri.queryParameters['by_dist'], '50.241246,11.327765');
+      expect(request.uri.queryParameters['page'], '2');
       expect(request.uri.queryParameters['per_page'], '40');
     },
   );

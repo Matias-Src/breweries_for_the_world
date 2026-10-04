@@ -78,6 +78,77 @@ void main() {
   );
 
   blocTest<NearbyBreweriesBloc, NearbyBreweriesState>(
+    'refreshes location without reloading nearby breweries',
+    setUp: () {
+      const refreshedLocation = UserLocation(latitude: 51.0, longitude: 12.0);
+      var locationRequests = 0;
+      when(() => locationRepository.getCurrentLocation()).thenAnswer((_) async {
+        locationRequests++;
+        return locationRequests == 1 ? location : refreshedLocation;
+      });
+      when(
+        () => breweryRepository.getNearestBreweries(
+          latitude: location.latitude,
+          longitude: location.longitude,
+          limit: 40,
+        ),
+      ).thenAnswer((_) async => [brewery]);
+    },
+    build: () => NearbyBreweriesBloc(
+      getCurrentLocation: getCurrentLocation,
+      getNearestBreweries: getNearestBreweries,
+    ),
+    act: (bloc) async {
+      final initialLoad = bloc.stream.firstWhere(
+        (state) => state is NearbyBreweriesSuccess,
+      );
+      bloc.add(const LocationRequested());
+      await initialLoad;
+      final refreshed = bloc.stream.firstWhere(
+        (state) => state.location?.latitude == 51.0,
+      );
+      bloc.add(const LocationRefreshRequested());
+      await refreshed;
+    },
+    expect: () => [
+      isA<NearbyBreweriesLoading>(),
+      isA<NearbyBreweriesSuccess>().having(
+        (state) => state.location,
+        'initial location',
+        location,
+      ),
+      isA<NearbyBreweriesSuccess>()
+          .having(
+            (state) => state.isRefreshingLocation,
+            'refreshing location',
+            true,
+          )
+          .having((state) => state.breweries, 'retained breweries', [brewery]),
+      isA<NearbyBreweriesSuccess>()
+          .having(
+            (state) => state.location?.latitude,
+            'refreshed latitude',
+            51.0,
+          )
+          .having(
+            (state) => state.isRefreshingLocation,
+            'refresh complete',
+            false,
+          ),
+    ],
+    verify: (_) {
+      verify(() => locationRepository.getCurrentLocation()).called(2);
+      verify(
+        () => breweryRepository.getNearestBreweries(
+          latitude: location.latitude,
+          longitude: location.longitude,
+          limit: 40,
+        ),
+      ).called(1);
+    },
+  );
+
+  blocTest<NearbyBreweriesBloc, NearbyBreweriesState>(
     'does not request nearby breweries when location permission is denied',
     setUp: () {
       when(

@@ -91,6 +91,11 @@ class NearbyBreweriesMapController {
     }
   }
 
+  void refreshLocation() {
+    final location = _bloc.state.location;
+    if (location != null && location.isValid) recenter(location);
+  }
+
   Future<void> _recenterSafely(UserLocation location) async {
     try {
       await _mapAdapter.recenter(location);

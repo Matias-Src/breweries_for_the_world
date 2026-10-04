@@ -33,7 +33,11 @@ void main() {
       );
       verifyNever(() => platform.checkPermission());
       verifyNever(() => platform.requestPermission());
-      verifyNever(() => platform.getCurrentPosition());
+      verifyNever(
+        () => platform.getCurrentPosition(
+          locationSettings: any(named: 'locationSettings'),
+        ),
+      );
     },
   );
 
@@ -50,7 +54,9 @@ void main() {
         () => platform.requestPermission(),
       ).thenAnswer((_) async => LocationPermission.whileInUse);
       when(
-        () => platform.getCurrentPosition(),
+        () => platform.getCurrentPosition(
+          locationSettings: any(named: 'locationSettings'),
+        ),
       ).thenAnswer((_) async => _position());
 
       final location = await dataSource.getCurrentLocation();
@@ -60,7 +66,15 @@ void main() {
         const UserLocation(latitude: 50.241246, longitude: 11.327765),
       );
       verify(() => platform.requestPermission()).called(1);
-      verify(() => platform.getCurrentPosition()).called(1);
+      final settings =
+          verify(
+                () => platform.getCurrentPosition(
+                  locationSettings: captureAny(named: 'locationSettings'),
+                ),
+              ).captured.single
+              as LocationSettings;
+      expect(settings.accuracy, LocationAccuracy.medium);
+      expect(settings.timeLimit, const Duration(seconds: 8));
     },
   );
 
@@ -81,7 +95,11 @@ void main() {
         dataSource.getCurrentLocation(),
         throwsA(isA<LocationPermissionDeniedException>()),
       );
-      verifyNever(() => platform.getCurrentPosition());
+      verifyNever(
+        () => platform.getCurrentPosition(
+          locationSettings: any(named: 'locationSettings'),
+        ),
+      );
     },
   );
 
@@ -106,7 +124,11 @@ void main() {
         ),
       );
       verifyNever(() => platform.requestPermission());
-      verifyNever(() => platform.getCurrentPosition());
+      verifyNever(
+        () => platform.getCurrentPosition(
+          locationSettings: any(named: 'locationSettings'),
+        ),
+      );
     },
   );
 
@@ -118,7 +140,9 @@ void main() {
       () => platform.checkPermission(),
     ).thenAnswer((_) async => LocationPermission.whileInUse);
     when(
-      () => platform.getCurrentPosition(),
+      () => platform.getCurrentPosition(
+        locationSettings: any(named: 'locationSettings'),
+      ),
     ).thenAnswer((_) async => _position());
 
     final location = await dataSource.getCurrentLocation();

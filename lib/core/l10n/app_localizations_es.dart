@@ -18,6 +18,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get myLocation => 'Mi ubicación';
 
   @override
+  String get updatingLocation => 'Actualizando ubicación';
+
+  @override
   String get searchBreweriesHint => 'Buscar cervecerías';
 
   @override
@@ -41,6 +44,10 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get locationUnavailable => 'Ubicación no disponible';
+
+  @override
+  String get locationUsingLastKnown =>
+      'No se pudo actualizar la ubicación. Se muestra la última posición conocida.';
 
   @override
   String get calculatingRoute => 'Calculando ruta...';

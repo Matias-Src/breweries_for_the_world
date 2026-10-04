@@ -7,12 +7,16 @@ sealed class NearbyBreweriesState {
     this.location,
     this.activeTypes = const {},
     this.selectedBreweryId,
+    this.isRefreshingLocation = false,
+    this.locationRefreshError,
   });
 
   final List<Brewery> breweries;
   final UserLocation? location;
   final Set<String> activeTypes;
   final String? selectedBreweryId;
+  final bool isRefreshingLocation;
+  final Object? locationRefreshError;
 }
 
 final class NearbyBreweriesInitial extends NearbyBreweriesState {
@@ -25,6 +29,8 @@ final class NearbyBreweriesLoading extends NearbyBreweriesState {
     super.location,
     super.activeTypes,
     super.selectedBreweryId,
+    super.isRefreshingLocation,
+    super.locationRefreshError,
   });
 }
 
@@ -34,11 +40,18 @@ final class NearbyBreweriesSuccess extends NearbyBreweriesState {
     super.location,
     super.activeTypes = const {},
     super.selectedBreweryId,
+    super.isRefreshingLocation,
+    super.locationRefreshError,
   }) : super(breweries: breweries);
 }
 
 final class NearbyBreweriesEmpty extends NearbyBreweriesState {
-  const NearbyBreweriesEmpty({super.location, super.activeTypes});
+  const NearbyBreweriesEmpty({
+    super.location,
+    super.activeTypes,
+    super.isRefreshingLocation,
+    super.locationRefreshError,
+  });
 }
 
 final class NearbyBreweriesError extends NearbyBreweriesState {
@@ -49,6 +62,8 @@ final class NearbyBreweriesError extends NearbyBreweriesState {
     super.location,
     super.activeTypes,
     super.selectedBreweryId,
+    super.isRefreshingLocation,
+    super.locationRefreshError,
   });
 
   final Object exception;

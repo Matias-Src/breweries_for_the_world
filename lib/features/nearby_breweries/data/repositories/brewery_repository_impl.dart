@@ -48,12 +48,14 @@ class BreweryRepositoryImpl implements BreweryRepository {
   Future<List<Brewery>> getNearestBreweries({
     required double latitude,
     required double longitude,
+    int page = 1,
     int limit = 40,
   }) async {
     try {
       final breweries = await _remoteDataSource.getNearestBreweries(
         latitude: latitude,
         longitude: longitude,
+        page: page,
         limit: limit,
       );
       return breweries

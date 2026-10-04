@@ -116,6 +116,12 @@ abstract class AppLocalizations {
   /// **'My location'**
   String get myLocation;
 
+  /// No description provided for @updatingLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Updating location'**
+  String get updatingLocation;
+
   /// No description provided for @searchBreweriesHint.
   ///
   /// In en, this message translates to:
@@ -163,6 +169,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Location unavailable'**
   String get locationUnavailable;
+
+  /// No description provided for @locationUsingLastKnown.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not update location. Showing the last known position.'**
+  String get locationUsingLastKnown;
 
   /// No description provided for @calculatingRoute.
   ///

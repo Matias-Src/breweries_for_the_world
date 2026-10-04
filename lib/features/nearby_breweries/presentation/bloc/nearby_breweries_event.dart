@@ -9,8 +9,16 @@ final class LocationRequested extends NearbyBreweriesEvent {
   final double? longitude;
 }
 
+final class LocationRefreshRequested extends NearbyBreweriesEvent {
+  const LocationRefreshRequested();
+}
+
 final class RetryRequested extends NearbyBreweriesEvent {
   const RetryRequested();
+}
+
+final class NearbyBreweriesNextPageRequested extends NearbyBreweriesEvent {
+  const NearbyBreweriesNextPageRequested();
 }
 
 final class SearchQueryChanged extends NearbyBreweriesEvent {
