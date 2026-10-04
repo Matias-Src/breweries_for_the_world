@@ -1,34 +1,34 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
+import '../../../../core/l10n/app_localizations.dart';
+import '../../../../core/settings/app_settings_cubit.dart';
 import '../../domain/entities/brewery.dart';
 import '../../domain/entities/user_location.dart';
-import '../../domain/usecases/get_brewery_route.dart';
 import '../bloc/nearby_breweries_bloc.dart';
-import '../bloc/nearby_breweries_event.dart';
 import '../bloc/nearby_breweries_state.dart';
 import '../formatters/brewery_address_formatter.dart';
 import '../map/brewery_map_adapter.dart';
-import 'brewery_detail_page.dart';
+import '../map/nearby_breweries_map_controller.dart';
 
-class NearbyBreweriesMapPage extends StatefulWidget {
+class NearbyBreweriesMapPage extends StatelessWidget {
   const NearbyBreweriesMapPage({
     super.key,
     required this.mapAdapter,
-    this.getBreweryRoute,
+    required this.mapController,
+    required this.settingsCubit,
+    required this.onOpenCatalog,
+    required this.onOpenBreweryDetails,
   });
 
   final BreweryMapAdapter mapAdapter;
-  final GetBreweryRoute? getBreweryRoute;
+  final NearbyBreweriesMapController mapController;
+  final AppSettingsCubit settingsCubit;
+  final VoidCallback onOpenCatalog;
+  final void Function(Brewery brewery, UserLocation? location)
+  onOpenBreweryDetails;
 
-  @override
-  State<NearbyBreweriesMapPage> createState() => _NearbyBreweriesMapPageState();
-}
-
-class _NearbyBreweriesMapPageState extends State<NearbyBreweriesMapPage> {
-  static const _breweryCardExtent = 296.0;
   static const _breweryTypes = [
     'micro',
     'nano',
@@ -40,20 +40,12 @@ class _NearbyBreweriesMapPageState extends State<NearbyBreweriesMapPage> {
     'contract',
     'closed',
   ];
-  final ScrollController _carouselController = ScrollController();
-  final TextEditingController _searchController = TextEditingController();
-
-  @override
-  void dispose() {
-    _carouselController.dispose();
-    _searchController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
     final labels = _NearbyBreweriesLabels.of(context);
     return Scaffold(
+      drawer: _buildDrawer(context, labels),
       body: BlocBuilder<NearbyBreweriesBloc, NearbyBreweriesState>(
         builder: (context, state) {
           final success = state is NearbyBreweriesSuccess ? state : null;
@@ -72,7 +64,7 @@ class _NearbyBreweriesMapPageState extends State<NearbyBreweriesMapPage> {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                widget.mapAdapter.buildMap(
+                mapAdapter.buildMap(
                   userLocation: location != null && _isValidLocation(location)
                       ? location
                       : null,
@@ -83,7 +75,7 @@ class _NearbyBreweriesMapPageState extends State<NearbyBreweriesMapPage> {
                   breweries: mappedBreweries,
                   selectedBreweryId: success?.selectedBreweryId,
                   onBrewerySelected: (breweryId) =>
-                      _onMarkerSelected(context, breweries, breweryId),
+                      mapController.onMarkerSelected(breweries, breweryId),
                 ),
                 Positioned(
                   top: 12,
@@ -92,62 +84,33 @@ class _NearbyBreweriesMapPageState extends State<NearbyBreweriesMapPage> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Material(
-                        key: const ValueKey('brewery-search-island'),
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.surfaceContainerHigh,
-                        elevation: 8,
-                        shadowColor: const Color(0x33000000),
-                        borderRadius: BorderRadius.circular(32),
-                        child: SizedBox(
-                          height: 56,
-                          child: TextField(
-                            key: const ValueKey('brewery-search-field'),
-                            controller: _searchController,
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.onSurface,
-                            ),
-                            textInputAction: TextInputAction.search,
-                            decoration: InputDecoration(
-                              hintText: labels.searchHint,
-                              prefixIcon: const Icon(Icons.search),
-                              suffixIcon:
-                                  ValueListenableBuilder<TextEditingValue>(
-                                    valueListenable: _searchController,
-                                    builder: (context, value, _) =>
-                                        value.text.isEmpty
-                                        ? const SizedBox.shrink()
-                                        : IconButton(
-                                            tooltip: labels.clearSearch,
-                                            onPressed: () {
-                                              _searchController.clear();
-                                              context
-                                                  .read<NearbyBreweriesBloc>()
-                                                  .add(
-                                                    const SearchQueryChanged(
-                                                      '',
-                                                    ),
-                                                  );
-                                            },
-                                            icon: const Icon(Icons.close),
-                                          ),
-                                  ),
-                              hintStyle: TextStyle(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onSurfaceVariant,
-                              ),
-                              border: InputBorder.none,
-                              contentPadding: const EdgeInsets.symmetric(
-                                vertical: 16,
+                      Row(
+                        children: [
+                          Material(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.surfaceContainerHigh,
+                            shape: const CircleBorder(),
+                            elevation: 8,
+                            child: Builder(
+                              builder: (buttonContext) => IconButton(
+                                key: const ValueKey('app-drawer-button'),
+                                tooltip: AppLocalizations.of(context)!.openMenu,
+                                onPressed: () =>
+                                    Scaffold.of(buttonContext).openDrawer(),
+                                icon: const Icon(Icons.menu),
                               ),
                             ),
-                            onChanged: (query) => context
-                                .read<NearbyBreweriesBloc>()
-                                .add(SearchQueryChanged(query)),
                           ),
-                        ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _BrewerySearchField(
+                              labels: labels,
+                              onChanged: mapController.search,
+                              onClear: mapController.clearSearch,
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 8),
                       _buildFilterChips(context, state, labels),
@@ -169,11 +132,12 @@ class _NearbyBreweriesMapPageState extends State<NearbyBreweriesMapPage> {
                     bottom: 8,
                     child: SizedBox(
                       height: 210,
-                      child: _buildCarousel(
-                        context,
-                        breweries,
-                        success,
-                        location,
+                      child: _BreweryCarousel(
+                        breweries: breweries,
+                        selectedBreweryId: success?.selectedBreweryId,
+                        onSelected: mapController.selectBrewery,
+                        onDetails: (brewery) =>
+                            onOpenBreweryDetails(brewery, location),
                       ),
                     ),
                   ),
@@ -182,9 +146,8 @@ class _NearbyBreweriesMapPageState extends State<NearbyBreweriesMapPage> {
                     right: 16,
                     bottom: hasCarousel ? 230 : 24,
                     child: FloatingActionButton(
-                      tooltip: 'My location',
-                      onPressed: () =>
-                          unawaited(widget.mapAdapter.recenter(location)),
+                      tooltip: labels.myLocation,
+                      onPressed: () => mapController.recenter(location),
                       child: const Icon(Icons.my_location),
                     ),
                   ),
@@ -196,6 +159,76 @@ class _NearbyBreweriesMapPageState extends State<NearbyBreweriesMapPage> {
     );
   }
 
+  Widget _buildDrawer(BuildContext context, _NearbyBreweriesLabels labels) =>
+      Drawer(
+        child: SafeArea(
+          child: Builder(
+            builder: (drawerContext) =>
+                BlocBuilder<AppSettingsCubit, AppSettingsState>(
+                  bloc: settingsCubit,
+                  builder: (context, settings) => ListView(
+                    padding: EdgeInsets.zero,
+                    children: [
+                      DrawerHeader(
+                        decoration: BoxDecoration(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.surfaceContainerHigh,
+                        ),
+                        child: SvgPicture.asset(
+                          'assets/icons/app_logo.svg',
+                          semanticsLabel: labels.appTitle,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                      ListTile(
+                        key: const ValueKey('open-brewery-catalog'),
+                        leading: const Icon(Icons.public),
+                        title: Text(labels.allBreweries),
+                        onTap: () {
+                          Scaffold.of(drawerContext).closeDrawer();
+                          onOpenCatalog();
+                        },
+                      ),
+                      const Divider(),
+                      SwitchListTile(
+                        key: const ValueKey('dark-mode-toggle'),
+                        secondary: const Icon(Icons.dark_mode_outlined),
+                        title: Text(labels.darkMode),
+                        value: settings.themeMode == ThemeMode.dark,
+                        onChanged: (isDark) => settingsCubit.setThemeMode(
+                          isDark ? ThemeMode.dark : ThemeMode.light,
+                        ),
+                      ),
+                      ListTile(
+                        leading: const Icon(Icons.language),
+                        title: Text(labels.language),
+                        trailing: DropdownButton<Locale>(
+                          key: const ValueKey('language-selector'),
+                          value: settings.locale,
+                          underline: const SizedBox.shrink(),
+                          items: [
+                            DropdownMenuItem(
+                              value: const Locale('en'),
+                              child: Text(labels.english),
+                            ),
+                            DropdownMenuItem(
+                              value: const Locale('es'),
+                              child: Text(labels.spanish),
+                            ),
+                          ],
+                          onChanged: (locale) {
+                            if (locale != null) settingsCubit.setLocale(locale);
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+          ),
+        ),
+      );
+
   Widget _buildFilterChips(
     BuildContext context,
     NearbyBreweriesState state,
@@ -206,7 +239,6 @@ class _NearbyBreweriesMapPageState extends State<NearbyBreweriesMapPage> {
       NearbyBreweriesEmpty(:final activeTypes) => activeTypes,
       _ => const <String>{},
     };
-    final bloc = context.read<NearbyBreweriesBloc>();
     final colorScheme = Theme.of(context).colorScheme;
 
     return SizedBox(
@@ -230,7 +262,7 @@ class _NearbyBreweriesMapPageState extends State<NearbyBreweriesMapPage> {
                     ? colorScheme.onPrimary
                     : colorScheme.onSurface,
               ),
-              onSelected: (_) => bloc.add(const FiltersCleared()),
+              onSelected: (_) => mapController.clearFilters(),
             ),
           ),
           for (final type in _breweryTypes)
@@ -248,142 +280,154 @@ class _NearbyBreweriesMapPageState extends State<NearbyBreweriesMapPage> {
                       ? colorScheme.onPrimary
                       : colorScheme.onSurface,
                 ),
-                onSelected: (_) {
-                  final nextTypes = Set<String>.of(activeTypes);
-                  if (!nextTypes.add(type)) nextTypes.remove(type);
-                  _applyBreweryTypeFilter(bloc, nextTypes);
-                },
+                onSelected: (_) =>
+                    mapController.toggleBreweryType(type, activeTypes),
               ),
             ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildCarousel(
-    BuildContext context,
-    List<Brewery> breweries,
-    NearbyBreweriesSuccess? success,
-    UserLocation? location,
-  ) => ListView.builder(
-    key: const ValueKey('brewery-carousel'),
-    controller: _carouselController,
-    scrollDirection: Axis.horizontal,
-    itemExtent: _breweryCardExtent,
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-    itemCount: breweries.length,
-    itemBuilder: (context, index) => Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 6),
-      child: _BreweryCard(
-        brewery: breweries[index],
-        selected: breweries[index].id == success?.selectedBreweryId,
-        onSelected: () => _selectBrewery(context, breweries[index]),
-        onDetails: () => _openDetails(context, breweries[index], location),
+class _BrewerySearchField extends StatefulWidget {
+  const _BrewerySearchField({
+    required this.labels,
+    required this.onChanged,
+    required this.onClear,
+  });
+
+  final _NearbyBreweriesLabels labels;
+  final ValueChanged<String> onChanged;
+  final VoidCallback onClear;
+
+  @override
+  State<_BrewerySearchField> createState() => _BrewerySearchFieldState();
+}
+
+class _BrewerySearchFieldState extends State<_BrewerySearchField> {
+  final TextEditingController _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Material(
+    key: const ValueKey('brewery-search-island'),
+    color: Theme.of(context).colorScheme.surfaceContainerHigh,
+    elevation: 8,
+    shadowColor: const Color(0x33000000),
+    borderRadius: BorderRadius.circular(32),
+    child: SizedBox(
+      height: 56,
+      child: TextField(
+        key: const ValueKey('brewery-search-field'),
+        controller: _controller,
+        style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+        textInputAction: TextInputAction.search,
+        decoration: InputDecoration(
+          hintText: widget.labels.searchHint,
+          prefixIcon: const Icon(Icons.search),
+          suffixIcon: ValueListenableBuilder<TextEditingValue>(
+            valueListenable: _controller,
+            builder: (context, value, _) => value.text.isEmpty
+                ? const SizedBox.shrink()
+                : IconButton(
+                    tooltip: widget.labels.clearSearch,
+                    onPressed: () {
+                      _controller.clear();
+                      widget.onClear();
+                    },
+                    icon: const Icon(Icons.close),
+                  ),
+          ),
+          hintStyle: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(vertical: 16),
+        ),
+        onChanged: widget.onChanged,
       ),
     ),
   );
+}
 
-  void _onMarkerSelected(
-    BuildContext context,
-    List<Brewery> breweries,
-    String breweryId,
-  ) {
-    final index = breweries.indexWhere((brewery) => brewery.id == breweryId);
+class _BreweryCarousel extends StatefulWidget {
+  const _BreweryCarousel({
+    required this.breweries,
+    required this.selectedBreweryId,
+    required this.onSelected,
+    required this.onDetails,
+  });
+
+  static const _cardExtent = 296.0;
+
+  final List<Brewery> breweries;
+  final String? selectedBreweryId;
+  final ValueChanged<Brewery> onSelected;
+  final ValueChanged<Brewery> onDetails;
+
+  @override
+  State<_BreweryCarousel> createState() => _BreweryCarouselState();
+}
+
+class _BreweryCarouselState extends State<_BreweryCarousel> {
+  final ScrollController _controller = ScrollController();
+
+  @override
+  void didUpdateWidget(covariant _BreweryCarousel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.selectedBreweryId != widget.selectedBreweryId) {
+      _scrollToSelectedBrewery();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _scrollToSelectedBrewery() {
+    final selectedId = widget.selectedBreweryId;
+    if (selectedId == null || !_controller.hasClients) return;
+    final index = widget.breweries.indexWhere(
+      (brewery) => brewery.id == selectedId,
+    );
     if (index < 0) return;
-    _selectBrewery(context, breweries[index], recenterMap: false);
-    _scrollCardIntoView(index);
-  }
-
-  void _selectBrewery(
-    BuildContext context,
-    Brewery brewery, {
-    bool recenterMap = true,
-  }) {
-    final bloc = context.read<NearbyBreweriesBloc>();
-    final currentState = bloc.state;
-    final isDeselecting =
-        currentState is NearbyBreweriesSuccess &&
-        currentState.selectedBreweryId == brewery.id;
-    bloc.add(BrewerySelected(brewery.id));
-    if (!recenterMap) return;
-    if (isDeselecting) {
-      _recenterOnUserLocation(currentState);
-      return;
-    }
-    final latitude = brewery.latitude;
-    final longitude = brewery.longitude;
-    if (latitude == null ||
-        longitude == null ||
-        !_isValidCoordinates(latitude, longitude)) {
-      return;
-    }
-    unawaited(
-      widget.mapAdapter.recenter(
-        UserLocation(latitude: latitude, longitude: longitude),
-      ),
-    );
-  }
-
-  void _applyBreweryTypeFilter(NearbyBreweriesBloc bloc, Set<String> types) {
-    final currentState = bloc.state;
-    if (currentState is NearbyBreweriesSuccess) {
-      final selectedBreweryId = currentState.selectedBreweryId;
-      final selectionMatchesFilter = currentState.breweries.any(
-        (brewery) =>
-            brewery.id == selectedBreweryId &&
-            types.contains(brewery.breweryType),
-      );
-      if (selectedBreweryId != null &&
-          types.isNotEmpty &&
-          !selectionMatchesFilter) {
-        _recenterOnUserLocation(currentState);
-      }
-    }
-    bloc.add(BreweryTypesChanged(types));
-  }
-
-  void _recenterOnUserLocation(NearbyBreweriesState state) {
-    final location = switch (state) {
-      NearbyBreweriesSuccess(:final location) => location,
-      NearbyBreweriesEmpty(:final location) => location,
-      _ => null,
-    };
-    if (location != null && _isValidLocation(location)) {
-      unawaited(widget.mapAdapter.recenter(location));
-    }
-  }
-
-  void _scrollCardIntoView(int index) {
-    if (!_carouselController.hasClients) return;
-    final target = (index * _breweryCardExtent).clamp(
+    final target = (index * _BreweryCarousel._cardExtent).clamp(
       0.0,
-      _carouselController.position.maxScrollExtent,
+      _controller.position.maxScrollExtent,
     );
-    unawaited(
-      _carouselController.animateTo(
-        target,
-        duration: const Duration(milliseconds: 280),
-        curve: Curves.easeOut,
-      ),
+    _controller.animateTo(
+      target,
+      duration: const Duration(milliseconds: 280),
+      curve: Curves.easeOut,
     );
   }
 
-  void _openDetails(
-    BuildContext context,
-    Brewery brewery,
-    UserLocation? location,
-  ) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => BreweryDetailPage(
-          brewery: brewery,
-          mapAdapter: widget.mapAdapter,
-          userLocation: location,
-          getBreweryRoute: widget.getBreweryRoute,
-        ),
+  @override
+  Widget build(BuildContext context) => ListView.builder(
+    key: const ValueKey('brewery-carousel'),
+    controller: _controller,
+    scrollDirection: Axis.horizontal,
+    itemExtent: _BreweryCarousel._cardExtent,
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+    itemCount: widget.breweries.length,
+    itemBuilder: (context, index) => Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      child: _BreweryCard(
+        brewery: widget.breweries[index],
+        selected: widget.breweries[index].id == widget.selectedBreweryId,
+        onSelected: () => widget.onSelected(widget.breweries[index]),
+        onDetails: () => widget.onDetails(widget.breweries[index]),
       ),
-    );
-  }
+    ),
+  );
 }
 
 class _BreweryCard extends StatelessWidget {
@@ -483,25 +527,24 @@ bool _hasValidCoordinates(Brewery brewery) {
 }
 
 class _NearbyBreweriesLabels {
-  const _NearbyBreweriesLabels(this.isSpanish);
+  const _NearbyBreweriesLabels(this.l10n);
 
   factory _NearbyBreweriesLabels.of(BuildContext context) =>
-      _NearbyBreweriesLabels(
-        Localizations.localeOf(context).languageCode == 'es',
-      );
+      _NearbyBreweriesLabels(AppLocalizations.of(context)!);
 
-  final bool isSpanish;
+  final AppLocalizations l10n;
 
-  String get searchHint =>
-      isSpanish ? 'Buscar cervecerías' : 'Search breweries';
-  String get clearSearch => isSpanish ? 'Borrar búsqueda' : 'Clear search';
-  String get allBreweries => isSpanish ? 'Todas' : 'All';
-  String get filterBreweries =>
-      isSpanish ? 'Filtrar cervecerías' : 'Filter breweries';
-  String get filtersTitle => isSpanish ? 'Filtros' : 'Filters';
-  String get clearFilters => isSpanish ? 'Limpiar' : 'Clear';
-  String get applyFilters => isSpanish ? 'Aplicar' : 'Apply';
-  String get moreDetails => isSpanish ? 'Ver más detalles' : 'More details';
+  String get appTitle => l10n.appTitle;
+  String get nearbyBreweries => l10n.nearbyBreweries;
+  String get allBreweries => l10n.allBreweries;
+  String get darkMode => l10n.darkMode;
+  String get language => l10n.language;
+  String get english => l10n.english;
+  String get spanish => l10n.spanish;
+  String get searchHint => l10n.searchBreweriesHint;
+  String get clearSearch => l10n.clearSearch;
+  String get moreDetails => l10n.moreDetails;
+  String get myLocation => l10n.myLocation;
 }
 
 bool _isValidLocation(UserLocation location) =>

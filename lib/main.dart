@@ -1,33 +1,43 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'core/app_startup.dart';
 import 'core/config/app_config.dart';
 import 'core/di/injection_container.dart';
+import 'core/l10n/app_localizations.dart';
+import 'core/navigation/app_router.dart';
+import 'core/settings/app_settings_cubit.dart';
+import 'features/nearby_breweries/presentation/bloc/brewery_catalog_bloc.dart';
 import 'features/nearby_breweries/presentation/bloc/nearby_breweries_bloc.dart';
 import 'features/nearby_breweries/presentation/bloc/nearby_breweries_event.dart';
-import 'features/nearby_breweries/presentation/bloc/nearby_breweries_state.dart';
+import 'features/nearby_breweries/domain/usecases/get_brewery_by_id.dart';
 import 'features/nearby_breweries/domain/usecases/get_brewery_route.dart';
-import 'features/nearby_breweries/presentation/map/brewery_map_adapter.dart';
 import 'features/nearby_breweries/presentation/map/mapbox_brewery_map_adapter.dart';
-import 'features/nearby_breweries/presentation/pages/nearby_breweries_map_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  final preferences = await SharedPreferences.getInstance();
   await bootstrapApp(
     loadConfig: AppConfig.load,
     configureDependencies: (config) => configureDependencies(config: config),
     runApp: () {
       MapboxOptions.setAccessToken(getIt<AppConfig>().mapboxAccessToken);
       final bloc = getIt<NearbyBreweriesBloc>()..add(const LocationRequested());
-      final getBreweryRoute = getIt<GetBreweryRoute>();
+      final settingsCubit = AppSettingsCubit(preferences);
+      final appRouter = AppRouter(
+        mapAdapter: MapboxBreweryMapAdapter(),
+        getBreweryById: getIt<GetBreweryById>(),
+        createCatalogBloc: () => getIt<BreweryCatalogBloc>(),
+        getBreweryRoute: getIt<GetBreweryRoute>(),
+      );
       runApp(
         MyApp(
           nearbyBreweriesBloc: bloc,
-          mapAdapter: MapboxBreweryMapAdapter(),
-          getBreweryRoute: getBreweryRoute,
+          appSettingsCubit: settingsCubit,
+          appRouter: appRouter,
         ),
       );
     },
@@ -38,13 +48,13 @@ class MyApp extends StatelessWidget {
   const MyApp({
     super.key,
     required this.nearbyBreweriesBloc,
-    this.mapAdapter,
-    this.getBreweryRoute,
+    required this.appSettingsCubit,
+    required this.appRouter,
   });
 
   final NearbyBreweriesBloc nearbyBreweriesBloc;
-  final BreweryMapAdapter? mapAdapter;
-  final GetBreweryRoute? getBreweryRoute;
+  final AppSettingsCubit appSettingsCubit;
+  final AppRouter appRouter;
 
   @override
   Widget build(BuildContext context) {
@@ -68,78 +78,53 @@ class MyApp extends StatelessWidget {
           surfaceContainerHighest: const Color(0xff3c4043),
           onSurfaceVariant: mapMutedText,
         );
-    return MaterialApp(
-      title: 'Breweries For The World',
-      supportedLocales: const [Locale('en'), Locale('es')],
-      localizationsDelegates: GlobalMaterialLocalizations.delegates,
-      theme: ThemeData(
-        colorScheme: colorScheme,
-        scaffoldBackgroundColor: const Color(0xff17181a),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: mapSurface,
-          foregroundColor: Colors.white,
-          scrolledUnderElevation: 0,
-        ),
-        floatingActionButtonTheme: const FloatingActionButtonThemeData(
-          backgroundColor: mapBlue,
-          foregroundColor: mapSurface,
-        ),
-      ),
-      home: BlocProvider.value(
-        value: nearbyBreweriesBloc,
-        child: mapAdapter == null
-            ? const NearbyBreweriesStartupPage()
-            : NearbyBreweriesMapPage(
-                mapAdapter: mapAdapter!,
-                getBreweryRoute: getBreweryRoute,
-              ),
-      ),
+    final darkScheme = colorScheme;
+    final lightScheme = ColorScheme.fromSeed(
+      seedColor: const Color(0xffa94f18),
+      brightness: Brightness.light,
     );
-  }
-}
-
-class NearbyBreweriesStartupPage extends StatelessWidget {
-  const NearbyBreweriesStartupPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Nearby breweries')),
-      body: BlocBuilder<NearbyBreweriesBloc, NearbyBreweriesState>(
-        builder: (context, state) => switch (state) {
-          NearbyBreweriesInitial() => const Center(
-            child: CircularProgressIndicator(),
-          ),
-          NearbyBreweriesLoading() => const Center(
-            child: CircularProgressIndicator(),
-          ),
-          NearbyBreweriesSuccess(:final breweries) => ListView.builder(
-            itemCount: breweries.length,
-            itemBuilder: (context, index) => ListTile(
-              title: Text(breweries[index].name),
-              subtitle: Text(breweries[index].breweryType),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider.value(value: nearbyBreweriesBloc),
+        BlocProvider.value(value: appSettingsCubit),
+      ],
+      child: BlocBuilder<AppSettingsCubit, AppSettingsState>(
+        bloc: appSettingsCubit,
+        builder: (context, settings) => MaterialApp.router(
+          onGenerateTitle: (context) => AppLocalizations.of(context)!.appTitle,
+          locale: settings.locale,
+          supportedLocales: AppLocalizations.supportedLocales,
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          themeMode: settings.themeMode,
+          theme: ThemeData(
+            colorScheme: lightScheme,
+            scaffoldBackgroundColor: const Color(0xfff6f5f1),
+            appBarTheme: AppBarTheme(
+              backgroundColor: lightScheme.surface,
+              foregroundColor: lightScheme.onSurface,
+              scrolledUnderElevation: 0,
             ),
           ),
-          NearbyBreweriesEmpty() => const Center(
-            child: Text('No nearby breweries found'),
-          ),
-          NearbyBreweriesError(:final exception) => Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(exception.toString(), textAlign: TextAlign.center),
-                const SizedBox(height: 12),
-                FilledButton.icon(
-                  onPressed: () => context.read<NearbyBreweriesBloc>().add(
-                    const RetryRequested(),
-                  ),
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Retry'),
-                ),
-              ],
+          darkTheme: ThemeData(
+            colorScheme: darkScheme,
+            scaffoldBackgroundColor: const Color(0xff17181a),
+            appBarTheme: const AppBarTheme(
+              backgroundColor: mapSurface,
+              foregroundColor: Colors.white,
+              scrolledUnderElevation: 0,
+            ),
+            floatingActionButtonTheme: const FloatingActionButtonThemeData(
+              backgroundColor: mapBlue,
+              foregroundColor: mapSurface,
             ),
           ),
-        },
+          routerConfig: appRouter.router,
+        ),
       ),
     );
   }

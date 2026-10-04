@@ -7,10 +7,12 @@ import 'package:breweries_for_the_world/features/nearby_breweries/domain/reposit
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/repositories/brewery_repository.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/repositories/location_repository.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/usecases/get_brewery_route.dart';
+import 'package:breweries_for_the_world/features/nearby_breweries/domain/usecases/get_brewery_page.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/usecases/get_current_location.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/usecases/get_nearest_breweries.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/usecases/search_breweries.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/presentation/bloc/nearby_breweries_bloc.dart';
+import 'package:breweries_for_the_world/features/nearby_breweries/presentation/bloc/brewery_catalog_bloc.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
@@ -54,10 +56,12 @@ void main() {
       );
       expect(container<LocationRepository>(), isA<LocationRepository>());
       expect(container<GetNearestBreweries>(), isA<GetNearestBreweries>());
+      expect(container<GetBreweryPage>(), isA<GetBreweryPage>());
       expect(container<GetCurrentLocation>(), isA<GetCurrentLocation>());
       expect(container<SearchBreweries>(), isA<SearchBreweries>());
       expect(container<GetBreweryRoute>(), isA<GetBreweryRoute>());
       expect(container<NearbyBreweriesBloc>(), isA<NearbyBreweriesBloc>());
+      expect(container<BreweryCatalogBloc>(), isA<BreweryCatalogBloc>());
     },
   );
 }

@@ -3,6 +3,13 @@ import 'package:dio/dio.dart';
 import '../models/brewery_dto.dart';
 
 abstract interface class BreweryRemoteDataSource {
+  Future<BreweryDto> getBreweryById({required String id});
+
+  Future<List<BreweryDto>> getBreweries({
+    required int page,
+    required int perPage,
+  });
+
   Future<List<BreweryDto>> getNearestBreweries({
     required double latitude,
     required double longitude,
@@ -16,6 +23,28 @@ class BreweryRemoteDataSourceImpl implements BreweryRemoteDataSource {
   BreweryRemoteDataSourceImpl({required Dio dio}) : _dio = dio;
 
   final Dio _dio;
+
+  @override
+  Future<BreweryDto> getBreweryById({required String id}) async {
+    final response = await _dio.get<Map<String, dynamic>>('/breweries/$id');
+    final brewery = response.data;
+    if (brewery == null) {
+      throw const FormatException('Brewery response is empty.');
+    }
+    return BreweryDto.fromJson(brewery);
+  }
+
+  @override
+  Future<List<BreweryDto>> getBreweries({
+    required int page,
+    required int perPage,
+  }) async {
+    final response = await _dio.get<List<dynamic>>(
+      '/breweries',
+      queryParameters: {'page': page, 'per_page': perPage},
+    );
+    return _parseBreweries(response.data);
+  }
 
   @override
   Future<List<BreweryDto>> getNearestBreweries({

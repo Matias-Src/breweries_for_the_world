@@ -43,6 +43,30 @@ void main() {
     repository = BreweryRepositoryImpl(remoteDataSource: dataSource);
   });
 
+  test('loads a brewery by id and maps it into a domain entity', () async {
+    when(
+      () => dataSource.getBreweryById(id: 'brewery-42'),
+    ).thenAnswer((_) async => BreweryDto.fromJson(breweryJson));
+
+    final brewery = await repository.getBreweryById(id: 'brewery-42');
+
+    verify(() => dataSource.getBreweryById(id: 'brewery-42')).called(1);
+    expect(brewery.name, "'s");
+    expect(brewery.city, 'Kronach');
+  });
+
+  test('maps a requested brewery page into domain entities', () async {
+    when(
+      () => dataSource.getBreweries(page: 2, perPage: 20),
+    ).thenAnswer((_) async => [BreweryDto.fromJson(breweryJson)]);
+
+    final breweries = await repository.getBreweries(page: 2, perPage: 20);
+
+    verify(() => dataSource.getBreweries(page: 2, perPage: 20)).called(1);
+    expect(breweries.single.name, "'s");
+    expect(breweries.single.city, 'Kronach');
+  });
+
   group('getNearestBreweries', () {
     test('requests 40 breweries ordered by distance from the user', () async {
       when(

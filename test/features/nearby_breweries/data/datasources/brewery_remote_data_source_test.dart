@@ -13,6 +13,25 @@ class _CapturingInterceptor extends Interceptor {
 }
 
 void main() {
+  test('requests the requested brewery catalog page', () async {
+    final interceptor = _CapturingInterceptor();
+    final dio = Dio(BaseOptions(baseUrl: 'https://api.openbrewerydb.org/v1'))
+      ..interceptors.add(interceptor);
+    final dataSource = BreweryRemoteDataSourceImpl(dio: dio);
+
+    final breweries = await dataSource.getBreweries(page: 3, perPage: 20);
+
+    final request = interceptor.request;
+    expect(breweries, isEmpty);
+    expect(request, isNotNull);
+    expect(request!.method, 'GET');
+    expect(request.path, '/breweries');
+    expect(request.queryParameters['page'], 3);
+    expect(request.queryParameters['per_page'], 20);
+    expect(request.uri.queryParameters['page'], '3');
+    expect(request.uri.queryParameters['per_page'], '20');
+  });
+
   test(
     'requests 40 breweries ordered by distance from the supplied location',
     () async {
@@ -92,15 +111,34 @@ void main() {
     expect(interceptor.request!.queryParameters['query'], 'Brew & Co/Köln');
     expect(interceptor.request!.uri.queryParameters['query'], 'Brew & Co/Köln');
   });
+
+  test('loads one brewery by id for direct detail routes', () async {
+    final interceptor = _ResponseInterceptor({
+      'id': 'brewery-42',
+      'name': 'Route Brewery',
+      'brewery_type': 'micro',
+    });
+    final dataSource = BreweryRemoteDataSourceImpl(
+      dio: Dio(BaseOptions(baseUrl: 'https://api.openbrewerydb.org/v1'))
+        ..interceptors.add(interceptor),
+    );
+
+    final brewery = await dataSource.getBreweryById(id: 'brewery-42');
+
+    expect(brewery.id, 'brewery-42');
+    expect(interceptor.request!.path, '/breweries/brewery-42');
+  });
 }
 
 class _ResponseInterceptor extends Interceptor {
   _ResponseInterceptor(this.data);
 
   final Object data;
+  RequestOptions? request;
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+    request = options;
     handler.resolve(Response<dynamic>(requestOptions: options, data: data));
   }
 }

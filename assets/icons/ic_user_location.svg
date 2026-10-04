@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="100%" height="100%">
+  <defs>
+    <!-- Gradiente para el halo exterior de precisión -->
+    <radialGradient id="userGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#3B82F6" stop-opacity="0.4"/>
+      <stop offset="70%" stop-color="#3B82F6" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#3B82F6" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Sombra del marcador -->
+    <filter id="dotShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-color="#000000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+
+  <!-- Halo exterior/Pulso de precisión GPS -->
+  <circle cx="32" cy="32" r="28" fill="url(#userGlow)"/>
+  <circle cx="32" cy="32" r="20" fill="none" stroke="#60A5FA" stroke-width="1.5" stroke-dasharray="3 3" opacity="0.8"/>
+
+  <!-- Punto Principal con Sombra -->
+  <g filter="url(#dotShadow)">
+    <!-- Borde Blanco Exterior -->
+    <circle cx="32" cy="32" r="10" fill="#FFFFFF"/>
+    <!-- Punto Azul Central (Ubicación actual) -->
+    <circle cx="32" cy="32" r="7" fill="#2563EB"/>
+    <!-- Brillo interno -->
+    <circle cx="30" cy="30" r="2.5" fill="#93C5FD" opacity="0.7"/>
+  </g>
+</svg>

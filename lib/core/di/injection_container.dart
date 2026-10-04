@@ -13,8 +13,11 @@ import '../../features/nearby_breweries/domain/repositories/brewery_repository.d
 import '../../features/nearby_breweries/domain/repositories/location_repository.dart';
 import '../../features/nearby_breweries/domain/usecases/get_current_location.dart';
 import '../../features/nearby_breweries/domain/usecases/get_brewery_route.dart';
+import '../../features/nearby_breweries/domain/usecases/get_brewery_by_id.dart';
 import '../../features/nearby_breweries/domain/usecases/get_nearest_breweries.dart';
+import '../../features/nearby_breweries/domain/usecases/get_brewery_page.dart';
 import '../../features/nearby_breweries/domain/usecases/search_breweries.dart';
+import '../../features/nearby_breweries/presentation/bloc/brewery_catalog_bloc.dart';
 import '../../features/nearby_breweries/presentation/bloc/nearby_breweries_bloc.dart';
 import '../config/app_config.dart';
 
@@ -60,6 +63,12 @@ Future<void> configureDependencies({
   services.registerLazySingleton<GetNearestBreweries>(
     () => GetNearestBreweries(services<BreweryRepository>()),
   );
+  services.registerLazySingleton<GetBreweryPage>(
+    () => GetBreweryPage(services<BreweryRepository>()),
+  );
+  services.registerLazySingleton<GetBreweryById>(
+    () => GetBreweryById(services<BreweryRepository>()),
+  );
   services.registerLazySingleton<GetCurrentLocation>(
     () => GetCurrentLocation(services<LocationRepository>()),
   );
@@ -73,6 +82,12 @@ Future<void> configureDependencies({
     () => NearbyBreweriesBloc(
       getNearestBreweries: services<GetNearestBreweries>(),
       getCurrentLocation: services<GetCurrentLocation>(),
+      searchBreweries: services<SearchBreweries>(),
+    ),
+  );
+  services.registerFactory<BreweryCatalogBloc>(
+    () => BreweryCatalogBloc(
+      getBreweries: services<GetBreweryPage>(),
       searchBreweries: services<SearchBreweries>(),
     ),
   );

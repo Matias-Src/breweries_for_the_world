@@ -1,158 +1,105 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../core/l10n/app_localizations.dart';
 import '../../domain/entities/brewery.dart';
 import '../../domain/entities/brewery_route.dart';
 import '../../domain/entities/route_mode.dart';
-import '../../domain/entities/user_location.dart';
-import '../../domain/usecases/get_brewery_route.dart';
+import '../bloc/brewery_detail_cubit.dart';
 import '../formatters/brewery_address_formatter.dart';
 import '../map/brewery_map_adapter.dart';
 
-class BreweryDetailPage extends StatefulWidget {
-  const BreweryDetailPage({
-    super.key,
-    required this.brewery,
-    required this.mapAdapter,
-    this.userLocation,
-    this.getBreweryRoute,
-  });
+class BreweryDetailPage extends StatelessWidget {
+  const BreweryDetailPage({super.key, required this.mapAdapter});
 
-  final Brewery brewery;
   final BreweryMapAdapter mapAdapter;
-  final UserLocation? userLocation;
-  final GetBreweryRoute? getBreweryRoute;
-
-  @override
-  State<BreweryDetailPage> createState() => _BreweryDetailPageState();
-}
-
-class _BreweryDetailPageState extends State<BreweryDetailPage> {
-  RouteMode _selectedMode = RouteMode.walking;
-  BreweryRoute? _route;
-  Object? _routeError;
-  bool _isLoadingRoute = false;
-  int _routeRequestId = 0;
-
-  bool get _hasDestination {
-    final latitude = widget.brewery.latitude;
-    final longitude = widget.brewery.longitude;
-    return latitude != null &&
-        longitude != null &&
-        _isValidCoordinates(latitude, longitude);
-  }
-
-  bool get _canRequestRoute =>
-      _hasDestination &&
-      widget.userLocation != null &&
-      _isValidLocation(widget.userLocation!) &&
-      widget.getBreweryRoute != null;
-
-  @override
-  void initState() {
-    super.initState();
-    if (_canRequestRoute) {
-      _isLoadingRoute = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _requestRoute(RouteMode.walking);
-      });
-    }
-  }
-
-  Future<void> _requestRoute(RouteMode mode) async {
-    final origin = widget.userLocation;
-    final latitude = widget.brewery.latitude;
-    final longitude = widget.brewery.longitude;
-    final getBreweryRoute = widget.getBreweryRoute;
-    if (origin == null ||
-        latitude == null ||
-        longitude == null ||
-        getBreweryRoute == null) {
-      return;
-    }
-
-    final requestId = ++_routeRequestId;
-    setState(() {
-      _selectedMode = mode;
-      _route = null;
-      _routeError = null;
-      _isLoadingRoute = true;
-    });
-
-    try {
-      final route = await getBreweryRoute(
-        origin: origin,
-        destination: UserLocation(latitude: latitude, longitude: longitude),
-        mode: mode,
-      );
-      if (!mounted || requestId != _routeRequestId) return;
-      setState(() {
-        _route = route;
-        _isLoadingRoute = false;
-      });
-    } on Exception catch (error) {
-      if (!mounted || requestId != _routeRequestId) return;
-      setState(() {
-        _routeError = error;
-        _isLoadingRoute = false;
-      });
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
-    final brewery = widget.brewery;
-    final address = formatBreweryAddress(brewery);
-    final city = brewery.city?.trim();
-    final cityInAddress = city != null &&
-        address != null &&
-        address.toLowerCase().contains(city.toLowerCase());
-    final hasCoordinates = _hasDestination;
-
-    return Scaffold(
-      key: ValueKey('brewery-detail-view-${brewery.id}'),
-      appBar: AppBar(title: const Text('Brewery details')),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final panelHeight = constraints.maxHeight * 0.44;
-          return Stack(
-            fit: StackFit.expand,
-            children: [
-              KeyedSubtree(
-                key: const ValueKey('brewery-detail-map'),
-                child: widget.mapAdapter.buildBreweryMap(
-                  brewery: brewery,
-                  userLocation: widget.userLocation,
-                  route: _route,
-                  bottomPanelHeight: panelHeight,
-                ),
-              ),
-              Align(
-                alignment: Alignment.bottomCenter,
-                child: SizedBox(
-                  width: double.infinity,
-                  height: panelHeight,
-                  child: _BreweryDetailPanel(
-                    brewery: brewery,
-                    address: address,
-                    city: city,
-                    cityInAddress: cityInAddress,
-                    hasCoordinates: hasCoordinates,
-                    canRequestRoute: _canRequestRoute,
-                    selectedMode: _selectedMode,
-                    route: _route,
-                    routeError: _routeError,
-                    isLoadingRoute: _isLoadingRoute,
-                    labels: _BreweryDetailLabels.of(context),
-                    onModeChanged: _requestRoute,
-                    onRetry: () => _requestRoute(_selectedMode),
-                  ),
-                ),
-              ),
-            ],
+    final l10n = AppLocalizations.of(context)!;
+    return BlocBuilder<BreweryDetailCubit, BreweryDetailState>(
+      builder: (context, state) {
+        if (state.status == BreweryDetailStatus.loading) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
           );
-        },
-      ),
+        }
+        final brewery = state.brewery;
+        if (state.status == BreweryDetailStatus.error || brewery == null) {
+          return Scaffold(
+            appBar: AppBar(title: Text(l10n.breweryDetails)),
+            body: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(l10n.breweryDetailsLoadError),
+                  const SizedBox(height: 12),
+                  FilledButton.icon(
+                    onPressed: () => context.read<BreweryDetailCubit>().load(),
+                    icon: const Icon(Icons.refresh),
+                    label: Text(l10n.retry),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        final cubit = context.read<BreweryDetailCubit>();
+        final address = formatBreweryAddress(brewery);
+        final city = brewery.city?.trim();
+        final cityInAddress =
+            city != null &&
+            address != null &&
+            address.toLowerCase().contains(city.toLowerCase());
+        final canRequestRoute = cubit.canRequestRoute(brewery);
+
+        return Scaffold(
+          key: ValueKey('brewery-detail-view-${brewery.id}'),
+          appBar: AppBar(title: Text(l10n.breweryDetails)),
+          body: LayoutBuilder(
+            builder: (context, constraints) {
+              final panelHeight = constraints.maxHeight * 0.44;
+              return Stack(
+                fit: StackFit.expand,
+                children: [
+                  KeyedSubtree(
+                    key: const ValueKey('brewery-detail-map'),
+                    child: mapAdapter.buildBreweryMap(
+                      brewery: brewery,
+                      userLocation: cubit.userLocation,
+                      route: state.route,
+                      bottomPanelHeight: panelHeight,
+                    ),
+                  ),
+                  Align(
+                    alignment: Alignment.bottomCenter,
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: panelHeight,
+                      child: _BreweryDetailPanel(
+                        brewery: brewery,
+                        address: address,
+                        city: city,
+                        cityInAddress: cityInAddress,
+                        hasCoordinates: _hasValidCoordinates(brewery),
+                        canRequestRoute: canRequestRoute,
+                        selectedMode: state.selectedMode,
+                        route: state.route,
+                        routeError: state.routeError,
+                        isLoadingRoute: state.isLoadingRoute,
+                        onModeChanged: cubit.selectMode,
+                        onRetry: cubit.retryRoute,
+                        onOpenWebsite: cubit.openWebsite,
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        );
+      },
     );
   }
 }
@@ -169,9 +116,9 @@ class _BreweryDetailPanel extends StatelessWidget {
     required this.route,
     required this.routeError,
     required this.isLoadingRoute,
-    required this.labels,
     required this.onModeChanged,
     required this.onRetry,
+    required this.onOpenWebsite,
   });
 
   final Brewery brewery;
@@ -184,12 +131,13 @@ class _BreweryDetailPanel extends StatelessWidget {
   final BreweryRoute? route;
   final Object? routeError;
   final bool isLoadingRoute;
-  final _BreweryDetailLabels labels;
   final ValueChanged<RouteMode> onModeChanged;
   final VoidCallback onRetry;
+  final ValueChanged<String> onOpenWebsite;
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final colorScheme = Theme.of(context).colorScheme;
     final city = this.city;
     final details = [
@@ -232,12 +180,12 @@ class _BreweryDetailPanel extends StatelessWidget {
                   segments: [
                     ButtonSegment(
                       value: RouteMode.walking,
-                      label: Text(labels.walking),
+                      label: Text(l10n.walking),
                       icon: const Icon(Icons.directions_walk),
                     ),
                     ButtonSegment(
                       value: RouteMode.driving,
-                      label: Text(labels.driving),
+                      label: Text(l10n.driving),
                       icon: const Icon(Icons.directions_car),
                     ),
                   ],
@@ -247,13 +195,16 @@ class _BreweryDetailPanel extends StatelessWidget {
                       : null,
                 ),
                 const SizedBox(height: 6),
-                SizedBox(height: 24, child: _buildRouteStatus(context)),
+                SizedBox(height: 24, child: _buildRouteStatus(context, l10n)),
               ],
               if (address != null) ...[
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    Icon(Icons.location_on_outlined, color: colorScheme.primary),
+                    Icon(
+                      Icons.location_on_outlined,
+                      color: colorScheme.primary,
+                    ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
@@ -275,7 +226,10 @@ class _BreweryDetailPanel extends StatelessWidget {
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.phone_outlined, color: colorScheme.primary),
+                          Icon(
+                            Icons.phone_outlined,
+                            color: colorScheme.primary,
+                          ),
                           const SizedBox(width: 8),
                           Text(brewery.phone!.trim()),
                         ],
@@ -283,7 +237,7 @@ class _BreweryDetailPanel extends StatelessWidget {
                     if (_hasText(brewery.websiteUrl))
                       InkWell(
                         key: const ValueKey('brewery-website-link'),
-                        onTap: () => _openWebsite(brewery.websiteUrl!),
+                        onTap: () => onOpenWebsite(brewery.websiteUrl!),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -311,8 +265,8 @@ class _BreweryDetailPanel extends StatelessWidget {
     );
   }
 
-  Widget _buildRouteStatus(BuildContext context) {
-    if (!canRequestRoute) return Text(labels.locationUnavailable);
+  Widget _buildRouteStatus(BuildContext context, AppLocalizations l10n) {
+    if (!canRequestRoute) return Text(l10n.locationUnavailable);
     if (isLoadingRoute) {
       return Row(
         children: [
@@ -321,7 +275,7 @@ class _BreweryDetailPanel extends StatelessWidget {
             child: CircularProgressIndicator(strokeWidth: 2),
           ),
           const SizedBox(width: 8),
-          Text(labels.calculatingRoute),
+          Text(l10n.calculatingRoute),
         ],
       );
     }
@@ -330,13 +284,13 @@ class _BreweryDetailPanel extends StatelessWidget {
         children: [
           Expanded(
             child: Text(
-              labels.routeError,
+              l10n.routeError,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
           ),
           IconButton(
-            tooltip: labels.retry,
+            tooltip: l10n.retryRoute,
             onPressed: onRetry,
             icon: const Icon(Icons.refresh),
             visualDensity: VisualDensity.compact,
@@ -357,31 +311,15 @@ class _BreweryDetailPanel extends StatelessWidget {
   }
 }
 
-class _BreweryDetailLabels {
-  const _BreweryDetailLabels(this.isSpanish);
-
-  factory _BreweryDetailLabels.of(BuildContext context) =>
-      _BreweryDetailLabels(
-        Localizations.localeOf(context).languageCode == 'es',
-      );
-
-  final bool isSpanish;
-
-  String get walking => isSpanish ? 'A pie' : 'Walk';
-  String get driving => isSpanish ? 'En auto' : 'Drive';
-  String get locationUnavailable =>
-      isSpanish ? 'Ubicación no disponible' : 'Location unavailable';
-  String get calculatingRoute =>
-      isSpanish ? 'Calculando ruta...' : 'Calculating route...';
-  String get routeError =>
-      isSpanish ? 'No se pudo calcular la ruta' : 'Could not calculate route';
-  String get retry => isSpanish ? 'Reintentar ruta' : 'Retry route';
-}
-
 bool _hasText(String? value) => value != null && value.trim().isNotEmpty;
 
-bool _isValidLocation(UserLocation location) =>
-    _isValidCoordinates(location.latitude, location.longitude);
+bool _hasValidCoordinates(Brewery brewery) {
+  final latitude = brewery.latitude;
+  final longitude = brewery.longitude;
+  return latitude != null &&
+      longitude != null &&
+      _isValidCoordinates(latitude, longitude);
+}
 
 bool _isValidCoordinates(double latitude, double longitude) =>
     latitude.isFinite &&
@@ -390,19 +328,3 @@ bool _isValidCoordinates(double latitude, double longitude) =>
     latitude <= 90 &&
     longitude >= -180 &&
     longitude <= 180;
-
-Future<void> _openWebsite(String websiteUrl) async {
-  final trimmedUrl = websiteUrl.trim();
-  final parsedUrl = Uri.tryParse(trimmedUrl);
-  final uri = parsedUrl != null && parsedUrl.hasScheme
-      ? parsedUrl
-      : Uri.tryParse('https://$trimmedUrl');
-
-  if (uri == null ||
-      !{'http', 'https'}.contains(uri.scheme.toLowerCase()) ||
-      uri.host.isEmpty) {
-    return;
-  }
-
-  await launchUrl(uri, mode: LaunchMode.externalApplication);
-}

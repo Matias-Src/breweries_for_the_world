@@ -10,6 +10,12 @@ void main() {
     expect(config.mapboxAccessToken, 'pk.test-token');
   });
 
+  test('loads the Mapbox token supplied with a Dart define', () async {
+    final config = await AppConfig.load();
+
+    expect(config.mapboxAccessToken, 'pk.your_mapbox_token_here');
+  });
+
   test('fails clearly when the Mapbox token is missing', () {
     expect(
       () => AppConfig.fromEnvironment(const {}),

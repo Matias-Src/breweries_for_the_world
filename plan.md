@@ -20,7 +20,7 @@ Crear una pantalla de descubrimiento centrada en un mapa, inspirada en la fluide
 - El endpoint Search hace coincidencia parcial, sin distinguir mayúsculas/minúsculas, contra nombres de cervecerías. No busca ni geocodifica por sí mismo una ciudad/dirección; en esta entrega, la búsqueda acordada es de cervecerías.
 - Las coordenadas de `Brewery` son opcionales. Por tanto, los marcadores, la distancia y la ordenación por proximidad solo aplican a resultados con latitud y longitud válidas.
 - Si la ubicación no está disponible o se deniega el permiso, no se puede solicitar “las más cercanas”: mostrar el mapa sin posición del usuario y permitir búsqueda de cervecerías, con estado explicativo y reintento de ubicación.
-- Mapbox está confirmado. Cargar el token desde `.env` mediante configuración de entorno Flutter, incluir `.env` en `.gitignore` y documentar el nombre de variable en `.env.example`; el usuario añadirá el valor real. El token de mapas en una app cliente no es un secreto, por lo que debe restringirse por aplicación/plataforma y permisos.
+- Mapbox está confirmado. Pasar el token desde `.env` como entrada de compilación con `--dart-define-from-file=.env`; el archivo usa formato JSON, no se declara como asset y permanece en `.gitignore`. Documentar la variable en `.env.example`. El token público compilado en una app cliente se puede extraer, por lo que no debe contener credenciales privadas y debe restringirse por aplicación/plataforma y permisos.
 
 ## Arquitectura y contratos
 
@@ -50,8 +50,8 @@ Crear una pantalla de descubrimiento centrada en un mapa, inspirada en la fluide
 ### Inyección y dependencias
 
 - Registrar fuentes remotas, repositorios, casos de uso y `NearbyBreweriesBloc` con `get_it`/`injectable`, respetando los módulos y convenciones aprobados.
-- Dependencias a incorporar: `flutter_bloc`, `bloc_concurrency`, `dio`, `get_it`, `injectable`, `mapbox_maps_flutter`, `geolocator`, `flutter_dotenv` y las dependencias/generadores elegidos para i18n. El `pubspec.yaml` actual solo contiene dependencias del scaffold Flutter.
-- Configurar `flutter_dotenv` para cargar `.env` al inicio y exponer `MAPBOX_ACCESS_TOKEN` a Mapbox. Mantener `.env` fuera del control de versiones y añadir `.env.example` con el nombre de variable y un valor ilustrativo; el usuario completará las variables reales. No incluir credenciales privadas en el cliente.
+- Dependencias a incorporar: `flutter_bloc`, `bloc_concurrency`, `dio`, `get_it`, `injectable`, `mapbox_maps_flutter`, `geolocator` y las dependencias/generadores elegidos para i18n. El `pubspec.yaml` actual solo contiene dependencias del scaffold Flutter.
+- Leer `MAPBOX_ACCESS_TOKEN` con `String.fromEnvironment`, suministrado mediante `--dart-define-from-file=.env`. Mantener `.env` fuera del control de versiones y añadir `.env.example` como JSON con el nombre de variable y un valor ilustrativo; el usuario completará las variables reales. No incluir credenciales privadas en el cliente.
 - No agregar Turf si Haversine cubre este alcance y no se necesitan otras operaciones geoespaciales.
 
 ## Internacionalización
@@ -78,14 +78,14 @@ Añadir inglés (`en`) y español (`es`) mediante i18n, con un control accesible
 - La interfaz cubre carga, éxito, vacío, error con reintento y los estados de ubicación sin fallos silenciosos.
 - Los textos propios de la app se pueden cambiar entre español e inglés; los datos originales de OpenBreweryDB no se traducen.
 - Se solicitan las 40 cervecerías más próximas usando la posición del usuario y el orden `by_dist`; sin ubicación se muestra un estado alternativo y no se simula proximidad.
-- El token de Mapbox se carga desde `.env`, no se incluye un valor real en el repositorio y el usuario puede configurar sus variables.
+- El token público de Mapbox se pasa desde `.env` mediante `--dart-define-from-file`, sin empaquetar el archivo como asset. No se incluye un token real en el repositorio y el usuario puede configurar su variable. El valor del token sí queda dentro de la app compilada.
 - La splash nativa no espera llamadas de red; la carga de datos tiene estados visibles, conserva acceso a reintentar y no bloquea la exploración más tiempo del necesario.
 
 ## Decisiones confirmadas y límites de alcance
 
 1. Fuente confirmada: OpenBreweryDB; se utilizará `by_dist` para pedir 40 resultados cercanos.
 2. Búsqueda confirmada: endpoint Search de OpenBreweryDB para coincidencias parciales de nombres; no se implementará geocodificación de lugares en este alcance.
-3. Mapa confirmado: Mapbox, con token leído desde `.env`; el usuario proporcionará los valores.
+3. Mapa confirmado: Mapbox, con token público suministrado en compilación desde `.env` JSON mediante `--dart-define-from-file`; el usuario proporcionará el valor.
 4. Presentación confirmada: carrusel con las 40 cervecerías más próximas a la ubicación del usuario.
 5. Idiomas confirmados: inglés y español para textos de interfaz; los datos entregados por la API conservan su idioma original.
 
@@ -119,9 +119,9 @@ Añadir inglés (`en`) y español (`es`) mediante i18n, con un control accesible
 
 **RED:** probar carga de configuración y fallo claro si falta `MAPBOX_ACCESS_TOKEN`, registro de dependencias y arranque de la app sin esperar llamadas de red dentro de la splash.
 
-**GREEN:** configurar cliente Dio con base URL, dependencias (`get_it`/`injectable` o un registro equivalente testeable), carga de `.env` antes de `runApp`, `.env.example` y exclusión de `.env` en `.gitignore`; reemplazar el contador y conectar la pantalla inicial. Mantener la splash nativa breve y usar estado de carga dentro de la app.
+**GREEN:** configurar cliente Dio con base URL, dependencias (`get_it`/`injectable` o un registro equivalente testeable), carga de `MAPBOX_ACCESS_TOKEN` con `String.fromEnvironment` desde `--dart-define-from-file=.env`, `.env.example` JSON y exclusión de `.env` en `.gitignore`; reemplazar el contador y conectar la pantalla inicial. Mantener la splash nativa breve y usar estado de carga dentro de la app.
 
-**Aceptación:** `.env` real no se versiona; el ejemplo contiene solo una variable dummy; dependencias resueltas por inyección; arranque presenta carga/error y nunca espera red en la splash nativa.
+**Aceptación:** `.env` real no se versiona ni se empaqueta como asset; el ejemplo JSON contiene solo una variable dummy; dependencias resueltas por inyección; arranque presenta carga/error y nunca espera red en la splash nativa. El token público se considera extraíble del binario.
 
 ### Tarea 5: Mapa Mapbox y ubicación visible
 

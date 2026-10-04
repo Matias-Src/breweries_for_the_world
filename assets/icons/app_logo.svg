@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 120" width="100%" height="100%">
+  <defs>
+    <linearGradient id="beerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F59E0B"/>
+      <stop offset="100%" stop-color="#D97706"/>
+    </linearGradient>
+    <linearGradient id="foamGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#F3F4F6"/>
+    </linearGradient>
+    <linearGradient id="globeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3B82F6"/>
+      <stop offset="100%" stop-color="#1D4ED8"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Isotipo -->
+  <g transform="translate(10, 10)">
+    <!-- Globo Terráqueo de Fondo -->
+    <circle cx="50" cy="50" r="45" fill="url(#globeGrad)" />
+    <path d="M 10,50 A 40,25 0 0,0 90,50 A 40,25 0 0,0 10,50" fill="none" stroke="#60A5FA" stroke-width="2" opacity="0.6"/>
+    <line x1="50" y1="5" x2="50" y2="95" stroke="#60A5FA" stroke-width="2" opacity="0.6"/>
+
+    <!-- Pin de Ubicación + Jarra -->
+    <path d="M 50,10 C 33,10 20,23 20,40 C 20,62 50,88 50,88 C 50,88 80,62 80,40 C 80,23 67,10 50,10 Z" fill="#1E293B" opacity="0.25"/>
+
+    <!-- Cuerpo Cerveza -->
+    <rect x="35" y="38" width="30" height="36" rx="4" fill="url(#beerGrad)"/>
+    <path d="M 65,44 C 72,44 74,50 74,56 C 74,62 72,66 65,66" fill="none" stroke="#F59E0B" stroke-width="4" stroke-linecap="round"/>
+    <rect x="40" y="44" width="4" height="22" rx="2" fill="#FBBF24" opacity="0.5"/>
+    <rect x="48" y="44" width="4" height="22" rx="2" fill="#FBBF24" opacity="0.5"/>
+
+    <!-- Espuma Cerveza -->
+    <path d="M 33,38 C 33,34 37,32 41,34 C 43,31 48,30 51,33 C 54,31 60,32 61,35 C 65,34 68,37 67,40 Z" fill="url(#foamGrad)"/>
+  </g>
+
+  <!-- Texto de la App -->
+  <text x="125" y="52" font-family="system-ui, -apple-system, sans-serif" font-weight="800" font-size="28" fill="#1E293B" letter-spacing="-0.5">BREWERIES</text>
+  <text x="125" y="80" font-family="system-ui, -apple-system, sans-serif" font-weight="600" font-size="20" fill="#D97706" letter-spacing="2">FOR THE WORLD</text>
+</svg>

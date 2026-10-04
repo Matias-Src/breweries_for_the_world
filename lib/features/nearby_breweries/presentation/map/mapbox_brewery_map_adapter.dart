@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 
 import '../../domain/entities/brewery.dart';
@@ -90,10 +91,12 @@ class _MapboxMapSurface extends StatefulWidget {
 }
 
 class _MapboxMapSurfaceState extends State<_MapboxMapSurface> {
-  CircleAnnotationManager? _annotationManager;
+  PointAnnotationManager? _annotationManager;
   PolylineAnnotationManager? _routeAnnotationManager;
   MapboxMap? _map;
   Cancelable? _annotationTapEvents;
+  Uint8List? _breweryMarkerImage;
+  Uint8List? _userLocationImage;
   Future<void> _pendingAnnotationUpdate = Future<void>.value();
 
   @override
@@ -118,7 +121,46 @@ class _MapboxMapSurfaceState extends State<_MapboxMapSurface> {
 
   Future<void> _onMapCreated(MapboxMap map) async {
     _map = map;
-    final manager = await map.annotations.createCircleAnnotationManager();
+
+    await map.compass.updateSettings(
+      CompassSettings(
+        enabled: true,
+        position: OrnamentPosition.TOP_RIGHT,
+        marginTop: 150.0,
+        marginRight: 16.0,
+      ),
+    );
+
+    await map.scaleBar.updateSettings(ScaleBarSettings(enabled: false));
+
+    await map.logo.updateSettings(
+      LogoSettings(
+        position: OrnamentPosition.BOTTOM_RIGHT,
+        marginBottom: 16.0,
+        marginRight: 16.0,
+      ),
+    );
+
+    await map.attribution.updateSettings(
+      AttributionSettings(
+        position: OrnamentPosition.BOTTOM_LEFT,
+        marginBottom: 16.0,
+        marginLeft: 16.0,
+      ),
+    );
+
+    final breweryMarkerImage = await _loadMapIcon(
+      'assets/icons/ic_brewery_marker.png',
+    );
+    final userLocationImage = await _loadMapIcon(
+      'assets/icons/ic_user_location.png',
+    );
+    if (!mounted) return;
+    _breweryMarkerImage = breweryMarkerImage;
+    _userLocationImage = userLocationImage;
+    final manager = await map.annotations.createPointAnnotationManager();
+    await manager.setIconAllowOverlap(true);
+    await manager.setIconIgnorePlacement(true);
     if (!mounted) return;
     _annotationManager = manager;
     _routeAnnotationManager = await map.annotations
@@ -189,26 +231,24 @@ class _MapboxMapSurfaceState extends State<_MapboxMapSurface> {
 
   Future<void> _updateAnnotations() async {
     final manager = _annotationManager;
-    if (manager == null || !mounted) return;
+    final breweryMarkerImage = _breweryMarkerImage;
+    final userLocationImage = _userLocationImage;
+    if (manager == null ||
+        breweryMarkerImage == null ||
+        userLocationImage == null ||
+        !mounted) {
+      return;
+    }
 
-    final annotations = <CircleAnnotationOptions>[];
+    final annotations = <PointAnnotationOptions>[];
     final location = widget.userLocation;
     if (location != null && _isValidLocation(location)) {
       annotations.add(
-        CircleAnnotationOptions(
+        PointAnnotationOptions(
           geometry: _point(location.latitude, location.longitude),
-          circleColor: const Color(0x664285f4).toARGB32(),
-          circleRadius: 18,
-          customData: const {'userLocation': true},
-        ),
-      );
-      annotations.add(
-        CircleAnnotationOptions(
-          geometry: _point(location.latitude, location.longitude),
-          circleColor: const Color(0xff4285f4).toARGB32(),
-          circleRadius: 8,
-          circleStrokeColor: const Color(0xffffffff).toARGB32(),
-          circleStrokeWidth: 3,
+          image: userLocationImage,
+          iconAnchor: IconAnchor.CENTER,
+          iconSize: 1,
           customData: const {'userLocation': true},
         ),
       );
@@ -223,14 +263,11 @@ class _MapboxMapSurfaceState extends State<_MapboxMapSurface> {
       }
       final isSelected = brewery.id == widget.selectedBreweryId;
       annotations.add(
-        CircleAnnotationOptions(
+        PointAnnotationOptions(
           geometry: _point(latitude, longitude),
-          circleColor:
-              (isSelected ? const Color(0xff4285f4) : const Color(0xff8ab4f8))
-                  .toARGB32(),
-          circleRadius: isSelected ? 11 : 8,
-          circleStrokeColor: const Color(0xffffffff).toARGB32(),
-          circleStrokeWidth: 2,
+          image: breweryMarkerImage,
+          iconAnchor: IconAnchor.BOTTOM,
+          iconSize: isSelected ? 1 : 0.8,
           customData: {'breweryId': brewery.id},
         ),
       );
@@ -265,6 +302,11 @@ CameraViewportState _cameraAt(UserLocation location) => CameraViewportState(
   center: _point(location.latitude, location.longitude),
   zoom: InitialMapCamera.locationZoom,
 );
+
+Future<Uint8List> _loadMapIcon(String assetPath) async {
+  final data = await rootBundle.load(assetPath);
+  return data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+}
 
 Point _point(double latitude, double longitude) =>
     Point(coordinates: Position(longitude, latitude));
