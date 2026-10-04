@@ -1,0 +1,1 @@
+enum RouteMode { walking, driving }

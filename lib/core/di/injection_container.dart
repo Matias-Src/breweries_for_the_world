@@ -4,11 +4,15 @@ import 'package:get_it/get_it.dart';
 
 import '../../features/nearby_breweries/data/datasources/brewery_remote_data_source.dart';
 import '../../features/nearby_breweries/data/datasources/location_data_source.dart';
+import '../../features/nearby_breweries/data/datasources/mapbox_directions_remote_data_source.dart';
 import '../../features/nearby_breweries/data/repositories/brewery_repository_impl.dart';
+import '../../features/nearby_breweries/data/repositories/mapbox_directions_repository_impl.dart';
 import '../../features/nearby_breweries/data/repositories/location_repository_impl.dart';
+import '../../features/nearby_breweries/domain/repositories/brewery_route_repository.dart';
 import '../../features/nearby_breweries/domain/repositories/brewery_repository.dart';
 import '../../features/nearby_breweries/domain/repositories/location_repository.dart';
 import '../../features/nearby_breweries/domain/usecases/get_current_location.dart';
+import '../../features/nearby_breweries/domain/usecases/get_brewery_route.dart';
 import '../../features/nearby_breweries/domain/usecases/get_nearest_breweries.dart';
 import '../../features/nearby_breweries/domain/usecases/search_breweries.dart';
 import '../../features/nearby_breweries/presentation/bloc/nearby_breweries_bloc.dart';
@@ -29,6 +33,12 @@ Future<void> configureDependencies({
   services.registerLazySingleton<BreweryRemoteDataSource>(
     () => BreweryRemoteDataSourceImpl(dio: services<Dio>()),
   );
+  services.registerLazySingleton<MapboxDirectionsRemoteDataSource>(
+    () => MapboxDirectionsRemoteDataSourceImpl(
+      dio: services<Dio>(),
+      accessToken: config.mapboxAccessToken,
+    ),
+  );
   services.registerLazySingleton<LocationDataSource>(
     () => LocationDataSourceImpl(
       geolocatorPlatform: geo.GeolocatorPlatform.instance,
@@ -37,6 +47,11 @@ Future<void> configureDependencies({
   services.registerLazySingleton<BreweryRepository>(
     () => BreweryRepositoryImpl(
       remoteDataSource: services<BreweryRemoteDataSource>(),
+    ),
+  );
+  services.registerLazySingleton<BreweryRouteRepository>(
+    () => MapboxDirectionsRepositoryImpl(
+      dataSource: services<MapboxDirectionsRemoteDataSource>(),
     ),
   );
   services.registerLazySingleton<LocationRepository>(
@@ -50,6 +65,9 @@ Future<void> configureDependencies({
   );
   services.registerLazySingleton<SearchBreweries>(
     () => SearchBreweries(services<BreweryRepository>()),
+  );
+  services.registerLazySingleton<GetBreweryRoute>(
+    () => GetBreweryRoute(services<BreweryRouteRepository>()),
   );
   services.registerFactory<NearbyBreweriesBloc>(
     () => NearbyBreweriesBloc(
