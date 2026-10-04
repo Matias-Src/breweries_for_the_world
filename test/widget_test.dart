@@ -24,6 +24,10 @@ void main() {
     await tester.pumpWidget(MyApp(nearbyBreweriesBloc: bloc));
 
     expect(find.text('Nearby breweries'), findsOneWidget);
+    expect(
+      Theme.of(tester.element(find.text('Nearby breweries'))).brightness,
+      Brightness.dark,
+    );
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
     expect(find.text('Flutter Demo Home Page'), findsNothing);
   });

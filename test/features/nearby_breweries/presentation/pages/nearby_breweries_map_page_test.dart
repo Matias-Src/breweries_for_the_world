@@ -1,13 +1,16 @@
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/entities/brewery.dart';
+import 'package:breweries_for_the_world/features/nearby_breweries/domain/entities/brewery_route.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/entities/user_location.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/repositories/brewery_repository.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/usecases/get_nearest_breweries.dart';
+import 'package:breweries_for_the_world/features/nearby_breweries/domain/usecases/search_breweries.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/presentation/bloc/nearby_breweries_bloc.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/presentation/bloc/nearby_breweries_event.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/presentation/bloc/nearby_breweries_state.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/presentation/map/brewery_map_adapter.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/presentation/pages/nearby_breweries_map_page.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -37,26 +40,34 @@ class _RecordingBreweryMapAdapter implements BreweryMapAdapter {
     return ColoredBox(
       key: const ValueKey('map-surface'),
       color: Colors.black,
-      child: Wrap(
-        children: [
-          for (final brewery in breweries)
-            IconButton(
-              key: ValueKey('marker-${brewery.id}'),
-              tooltip: brewery.name,
-              onPressed: () => onBrewerySelected(brewery.id),
-              icon: Icon(
-                selectedBreweryId == brewery.id
-                    ? Icons.location_on
-                    : Icons.place,
+      child: Align(
+        alignment: Alignment.center,
+        child: Wrap(
+          children: [
+            for (final brewery in breweries)
+              IconButton(
+                key: ValueKey('marker-${brewery.id}'),
+                tooltip: brewery.name,
+                onPressed: () => onBrewerySelected(brewery.id),
+                icon: Icon(
+                  selectedBreweryId == brewery.id
+                      ? Icons.location_on
+                      : Icons.place,
+                ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   @override
-  Widget buildBreweryMap({required Brewery brewery}) => ColoredBox(
+  Widget buildBreweryMap({
+    required Brewery brewery,
+    required UserLocation? userLocation,
+    required BreweryRoute? route,
+    required double bottomPanelHeight,
+  }) => ColoredBox(
     key: ValueKey('detail-map-${brewery.id}'),
     color: Colors.black,
   );
@@ -136,6 +147,116 @@ void main() {
     );
   });
 
+  testWidgets('searches breweries from the floating search island', (
+    tester,
+  ) async {
+    const searchResult = Brewery(
+      id: 'brewery-search-result',
+      name: 'Search Result Brewery',
+      breweryType: 'micro',
+      latitude: 40.7,
+      longitude: -73.9,
+    );
+    final searchRepository = _MockBreweryRepository();
+    when(
+      () => searchRepository.searchBreweries(query: 'search result'),
+    ).thenAnswer((_) async => [searchResult]);
+    final result = await _pumpLoadedMapPage(tester, const [
+      breweryWithCoordinates,
+    ], searchBreweries: SearchBreweries(searchRepository));
+
+    final searchField = find.byKey(const ValueKey('brewery-search-field'));
+    expect(find.byKey(const ValueKey('brewery-search-island')), findsOneWidget);
+    expect(searchField, findsOneWidget);
+    await tester.enterText(searchField, 'search result');
+    await tester.pumpAndSettle();
+
+    expect(
+      result.bloc.state,
+      isA<NearbyBreweriesSuccess>().having(
+        (state) => state.breweries,
+        'search results',
+        const [searchResult],
+      ),
+    );
+    expect(result.adapter.breweries, const [searchResult]);
+  });
+
+  testWidgets(
+    'filters brewery cards and map markers immediately with type chips',
+    (tester) async {
+      const breweries = [
+        Brewery(
+          id: 'filter-micro',
+          name: 'Micro Brewery',
+          breweryType: 'micro',
+          latitude: 45.1,
+          longitude: -122.1,
+        ),
+        Brewery(
+          id: 'filter-nano',
+          name: 'Nano Brewery',
+          breweryType: 'nano',
+          latitude: 45.2,
+          longitude: -122.2,
+        ),
+        Brewery(
+          id: 'filter-brewpub',
+          name: 'Brewpub Brewery',
+          breweryType: 'brewpub',
+          latitude: 45.3,
+          longitude: -122.3,
+        ),
+      ];
+      final result = await _pumpLoadedMapPage(tester, breweries);
+      expect(
+        find.byKey(const ValueKey('brewery-filter-carousel')),
+        findsOneWidget,
+      );
+      await tester.tap(find.byKey(const ValueKey('brewery-type-micro')));
+      await tester.pumpAndSettle();
+      expect(
+        result.bloc.state,
+        isA<NearbyBreweriesSuccess>().having(
+          (state) => state.breweries.map((brewery) => brewery.id).toList(),
+          'micro-filtered breweries',
+          ['filter-micro'],
+        ),
+      );
+      expect(result.adapter.breweries, [breweries.first]);
+      expect(
+        find.byKey(const ValueKey('brewery-card-filter-brewpub')),
+        findsNothing,
+      );
+
+      await tester.tap(find.byKey(const ValueKey('brewery-type-nano')));
+      await tester.pumpAndSettle();
+      expect(
+        result.bloc.state,
+        isA<NearbyBreweriesSuccess>()
+            .having(
+              (state) => state.breweries.map((brewery) => brewery.id).toList(),
+              'filtered breweries',
+              ['filter-micro', 'filter-nano'],
+            )
+            .having((state) => state.activeTypes, 'active types', {
+              'micro',
+              'nano',
+            }),
+      );
+      expect(result.adapter.breweries, breweries.take(2).toList());
+
+      await tester.tap(find.byKey(const ValueKey('brewery-type-all')));
+      await tester.pumpAndSettle();
+      expect(
+        result.bloc.state,
+        isA<NearbyBreweriesSuccess>()
+            .having((state) => state.breweries, 'all breweries', breweries)
+            .having((state) => state.activeTypes, 'active types', isEmpty),
+      );
+    },
+  );
+
   testWidgets(
     'omits missing optional fields and avoids duplicate address segments',
     (tester) async {
@@ -213,6 +334,83 @@ void main() {
     expect(result.adapter.recenterRequests, [
       const UserLocation(latitude: 41.2, longitude: -72.4),
     ]);
+
+    await tester.tap(
+      find.byKey(const ValueKey('brewery-card-brewery-card-selection')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      result.bloc.state,
+      isA<NearbyBreweriesSuccess>().having(
+        (state) => state.selectedBreweryId,
+        'deselected brewery id',
+        isNull,
+      ),
+    );
+    expect(result.adapter.selectedBreweryId, isNull);
+    expect(result.adapter.recenterRequests, [
+      const UserLocation(latitude: 41.2, longitude: -72.4),
+      userLocation,
+    ]);
+  });
+
+  testWidgets('filtering out the selected brewery deselects and recenters', (
+    tester,
+  ) async {
+    const selectedBrewery = Brewery(
+      id: 'selected-nano',
+      name: 'Selected Nano Brewery',
+      breweryType: 'nano',
+      latitude: 41.2,
+      longitude: -72.4,
+    );
+    const remainingBrewery = Brewery(
+      id: 'remaining-micro',
+      name: 'Remaining Micro Brewery',
+      breweryType: 'micro',
+      latitude: 41.3,
+      longitude: -72.5,
+    );
+    final result = await _pumpLoadedMapPage(tester, const [
+      selectedBrewery,
+      remainingBrewery,
+    ]);
+
+    await tester.tap(find.byKey(const ValueKey('brewery-card-selected-nano')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('brewery-type-micro')));
+    await tester.pumpAndSettle();
+
+    expect(
+      result.bloc.state,
+      isA<NearbyBreweriesSuccess>()
+          .having((state) => state.breweries, 'filtered breweries', const [
+            remainingBrewery,
+          ])
+          .having(
+            (state) => state.selectedBreweryId,
+            'selected brewery id',
+            isNull,
+          ),
+    );
+    expect(result.adapter.selectedBreweryId, isNull);
+    expect(result.adapter.recenterRequests, [
+      const UserLocation(latitude: 41.2, longitude: -72.4),
+      userLocation,
+    ]);
+
+    await tester.tap(find.byKey(const ValueKey('brewery-type-all')));
+    await tester.pumpAndSettle();
+
+    expect(
+      result.bloc.state,
+      isA<NearbyBreweriesSuccess>().having(
+        (state) => state.selectedBreweryId,
+        'selection after clearing the filter',
+        isNull,
+      ),
+    );
   });
 
   testWidgets('selecting a marker scrolls its card into view', (tester) async {
@@ -251,13 +449,20 @@ void main() {
       latitude: 44.1,
       longitude: -121.3,
     );
-    await _pumpLoadedMapPage(tester, [brewery]);
+    await _pumpLoadedMapPage(tester, [brewery], locale: const Locale('es'));
 
     final detailsAction = find.byKey(
       const ValueKey('brewery-details-brewery-details'),
     );
     expect(detailsAction, findsOneWidget);
-    await tester.tap(detailsAction);
+    expect(find.text('Ver más detalles'), findsOneWidget);
+    final cardRect = tester.getRect(
+      find.byKey(const ValueKey('brewery-card-brewery-details')),
+    );
+    final buttonRect = tester.getRect(detailsAction);
+    expect(buttonRect.center.dx, closeTo(cardRect.center.dx, 1));
+    expect(cardRect.bottom - buttonRect.bottom, inInclusiveRange(4, 12));
+    await tester.tap(find.text('Ver más detalles'));
     await tester.pumpAndSettle();
 
     final detailsView = find.byKey(
@@ -269,7 +474,10 @@ void main() {
       findsOneWidget,
     );
     expect(
-      find.descendant(of: detailsView, matching: find.text('42 River Road')),
+      find.descendant(
+        of: detailsView,
+        matching: find.textContaining('42 River Road'),
+      ),
       findsOneWidget,
     );
     expect(
@@ -283,41 +491,6 @@ void main() {
       ),
       findsOneWidget,
     );
-  });
-
-  testWidgets('expands the brewery list and selects an item from it', (
-    tester,
-  ) async {
-    const brewery = Brewery(
-      id: 'brewery-expanded',
-      name: 'Expanded Brewery',
-      breweryType: 'micro',
-      latitude: 42.1,
-      longitude: -73.2,
-    );
-    final result = await _pumpLoadedMapPage(tester, [brewery]);
-
-    await tester.tap(find.byKey(const ValueKey('brewery-list-expand')));
-    await tester.pumpAndSettle();
-
-    final listItem = find.byKey(
-      const ValueKey('expanded-brewery-brewery-expanded'),
-    );
-    expect(listItem, findsOneWidget);
-    await tester.tap(listItem);
-    await tester.pumpAndSettle();
-
-    expect(
-      result.bloc.state,
-      isA<NearbyBreweriesSuccess>().having(
-        (state) => state.selectedBreweryId,
-        'selected brewery id',
-        brewery.id,
-      ),
-    );
-    expect(result.adapter.recenterRequests, [
-      const UserLocation(latitude: 42.1, longitude: -73.2),
-    ]);
   });
 
   testWidgets(
@@ -488,7 +661,12 @@ void main() {
 }
 
 Future<({NearbyBreweriesBloc bloc, _RecordingBreweryMapAdapter adapter})>
-_pumpLoadedMapPage(WidgetTester tester, List<Brewery> breweries) async {
+_pumpLoadedMapPage(
+  WidgetTester tester,
+  List<Brewery> breweries, {
+  SearchBreweries? searchBreweries,
+  Locale locale = const Locale('en'),
+}) async {
   final repository = _MockBreweryRepository();
   when(
     () => repository.getNearestBreweries(
@@ -499,12 +677,16 @@ _pumpLoadedMapPage(WidgetTester tester, List<Brewery> breweries) async {
   ).thenAnswer((_) async => breweries);
   final bloc = NearbyBreweriesBloc(
     getNearestBreweries: GetNearestBreweries(repository),
+    searchBreweries: searchBreweries,
   );
   final adapter = _RecordingBreweryMapAdapter();
   addTearDown(bloc.close);
 
   await tester.pumpWidget(
     MaterialApp(
+      locale: locale,
+      supportedLocales: const [Locale('en'), Locale('es')],
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
       home: BlocProvider.value(
         value: bloc,
         child: NearbyBreweriesMapPage(mapAdapter: adapter),

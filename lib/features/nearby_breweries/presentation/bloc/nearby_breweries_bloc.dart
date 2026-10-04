@@ -119,6 +119,16 @@ class NearbyBreweriesBloc
     Emitter<NearbyBreweriesState> emit,
   ) {
     _activeTypes = Set.unmodifiable(event.types);
+    final selectedBreweryId = _selectedBreweryId;
+    if (selectedBreweryId != null && _activeTypes.isNotEmpty) {
+      final breweries = _searchActive ? _searchResults : _nearbyBreweries;
+      final selectionMatchesFilter = breweries.any(
+        (brewery) =>
+            brewery.id == selectedBreweryId &&
+            _activeTypes.contains(brewery.breweryType),
+      );
+      if (!selectionMatchesFilter) _selectedBreweryId = null;
+    }
     if (_hasLoadedResults) {
       _emitCurrentResults(emit);
     }
@@ -140,7 +150,9 @@ class NearbyBreweriesBloc
   ) {
     final breweries = _searchActive ? _searchResults : _nearbyBreweries;
     if (!breweries.any((brewery) => brewery.id == event.breweryId)) return;
-    _selectedBreweryId = event.breweryId;
+    _selectedBreweryId = _selectedBreweryId == event.breweryId
+        ? null
+        : event.breweryId;
     _emitCurrentResults(emit);
   }
 
@@ -169,9 +181,10 @@ class NearbyBreweriesBloc
           visibleBreweries,
           location: location,
           activeTypes: activeTypes,
-          selectedBreweryId: visibleBreweries.any(
-            (brewery) => brewery.id == _selectedBreweryId,
-          )
+          selectedBreweryId:
+              visibleBreweries.any(
+                (brewery) => brewery.id == _selectedBreweryId,
+              )
               ? _selectedBreweryId
               : null,
         ),

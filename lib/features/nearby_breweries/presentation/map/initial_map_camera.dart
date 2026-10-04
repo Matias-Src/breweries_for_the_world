@@ -7,7 +7,7 @@ class InitialMapCamera {
     latitude: 39.8283,
     longitude: -98.5795,
   );
-  static const fallbackZoom = 5.5;
+  static const fallbackZoom = 11.0;
   static const locationZoom = 12.0;
 
   final UserLocation center;

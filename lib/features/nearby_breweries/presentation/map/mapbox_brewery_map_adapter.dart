@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 
 import '../../domain/entities/brewery.dart';
+import '../../domain/entities/brewery_route.dart';
 import '../../domain/entities/user_location.dart';
 import 'brewery_map_adapter.dart';
 import 'initial_map_camera.dart';
@@ -27,19 +30,27 @@ class MapboxBreweryMapAdapter implements BreweryMapAdapter {
   );
 
   @override
-  Widget buildBreweryMap({required Brewery brewery}) {
+  Widget buildBreweryMap({
+    required Brewery brewery,
+    required UserLocation? userLocation,
+    required BreweryRoute? route,
+    required double bottomPanelHeight,
+  }) {
     final latitude = brewery.latitude;
     final longitude = brewery.longitude;
-    final cameraLocation = latitude != null && longitude != null
+    final destinationLocation = latitude != null && longitude != null
         ? UserLocation(latitude: latitude, longitude: longitude)
         : null;
+    final cameraLocation = userLocation ?? destinationLocation;
 
     return _MapboxMapSurface(
       key: ValueKey('mapbox-brewery-map-${brewery.id}'),
-      userLocation: null,
+      userLocation: userLocation,
       initialCameraLocation: cameraLocation,
       breweries: [brewery],
       selectedBreweryId: brewery.id,
+      route: route,
+      routeBottomInset: bottomPanelHeight,
       onBrewerySelected: (_) {},
       viewportController: ViewportController(),
     );
@@ -59,6 +70,8 @@ class _MapboxMapSurface extends StatefulWidget {
     required this.initialCameraLocation,
     required this.breweries,
     required this.selectedBreweryId,
+    this.route,
+    this.routeBottomInset = 0,
     required this.onBrewerySelected,
     required this.viewportController,
   });
@@ -67,6 +80,8 @@ class _MapboxMapSurface extends StatefulWidget {
   final UserLocation? initialCameraLocation;
   final List<Brewery> breweries;
   final String? selectedBreweryId;
+  final BreweryRoute? route;
+  final double routeBottomInset;
   final ValueChanged<String> onBrewerySelected;
   final ViewportController viewportController;
 
@@ -76,6 +91,8 @@ class _MapboxMapSurface extends StatefulWidget {
 
 class _MapboxMapSurfaceState extends State<_MapboxMapSurface> {
   CircleAnnotationManager? _annotationManager;
+  PolylineAnnotationManager? _routeAnnotationManager;
+  MapboxMap? _map;
   Cancelable? _annotationTapEvents;
   Future<void> _pendingAnnotationUpdate = Future<void>.value();
 
@@ -93,12 +110,20 @@ class _MapboxMapSurfaceState extends State<_MapboxMapSurface> {
         oldWidget.selectedBreweryId != widget.selectedBreweryId) {
       _queueAnnotationUpdate();
     }
+    if (oldWidget.route != widget.route ||
+        oldWidget.routeBottomInset != widget.routeBottomInset) {
+      _queueRouteUpdate();
+    }
   }
 
   Future<void> _onMapCreated(MapboxMap map) async {
+    _map = map;
     final manager = await map.annotations.createCircleAnnotationManager();
     if (!mounted) return;
     _annotationManager = manager;
+    _routeAnnotationManager = await map.annotations
+        .createPolylineAnnotationManager();
+    if (!mounted) return;
     _annotationTapEvents = manager.tapEvents(
       onTap: (annotation) {
         final breweryId = annotation.customData?['breweryId'];
@@ -106,6 +131,52 @@ class _MapboxMapSurfaceState extends State<_MapboxMapSurface> {
       },
     );
     _queueAnnotationUpdate();
+    _queueRouteUpdate();
+  }
+
+  void _queueRouteUpdate() {
+    unawaited(_updateRoute());
+  }
+
+  Future<void> _updateRoute() async {
+    final manager = _routeAnnotationManager;
+    if (manager == null || !mounted) return;
+    await manager.deleteAll();
+
+    final route = widget.route;
+    if (route == null || route.coordinates.length < 2) return;
+    final lineCoordinates = route.coordinates
+        .map((location) => Position(location.longitude, location.latitude))
+        .toList(growable: false);
+    final points = lineCoordinates
+        .map((position) => Point(coordinates: position))
+        .toList(growable: false);
+    await manager.create(
+      PolylineAnnotationOptions(
+        geometry: LineString(coordinates: lineCoordinates),
+        lineColor: const Color(0xff4285f4).toARGB32(),
+        lineWidth: 6,
+        lineBorderColor: const Color(0xffffffff).toARGB32(),
+        lineBorderWidth: 2,
+        lineJoin: LineJoin.ROUND,
+      ),
+    );
+
+    final map = _map;
+    if (map == null || !mounted) return;
+    final camera = await map.cameraForCoordinatesPadding(
+      points,
+      CameraOptions(),
+      MbxEdgeInsets(
+        top: 48,
+        left: 36,
+        bottom: widget.routeBottomInset + 24,
+        right: 36,
+      ),
+      15,
+      null,
+    );
+    await map.easeTo(camera, MapAnimationOptions(duration: 900));
   }
 
   void _queueAnnotationUpdate() {
@@ -126,8 +197,16 @@ class _MapboxMapSurfaceState extends State<_MapboxMapSurface> {
       annotations.add(
         CircleAnnotationOptions(
           geometry: _point(location.latitude, location.longitude),
-          circleColor: const Color(0xff245ac4).toARGB32(),
-          circleRadius: 10,
+          circleColor: const Color(0x664285f4).toARGB32(),
+          circleRadius: 18,
+          customData: const {'userLocation': true},
+        ),
+      );
+      annotations.add(
+        CircleAnnotationOptions(
+          geometry: _point(location.latitude, location.longitude),
+          circleColor: const Color(0xff4285f4).toARGB32(),
+          circleRadius: 8,
           circleStrokeColor: const Color(0xffffffff).toARGB32(),
           circleStrokeWidth: 3,
           customData: const {'userLocation': true},
@@ -147,7 +226,7 @@ class _MapboxMapSurfaceState extends State<_MapboxMapSurface> {
         CircleAnnotationOptions(
           geometry: _point(latitude, longitude),
           circleColor:
-              (isSelected ? const Color(0xffb24b28) : const Color(0xff0b776b))
+              (isSelected ? const Color(0xff4285f4) : const Color(0xff8ab4f8))
                   .toARGB32(),
           circleRadius: isSelected ? 11 : 8,
           circleStrokeColor: const Color(0xffffffff).toARGB32(),
@@ -171,6 +250,7 @@ class _MapboxMapSurfaceState extends State<_MapboxMapSurface> {
   Widget build(BuildContext context) {
     final camera = InitialMapCamera.resolve(widget.initialCameraLocation);
     return MapWidget(
+      styleUri: MapboxStyles.DARK,
       viewport: CameraViewportState(
         center: _point(camera.center.latitude, camera.center.longitude),
         zoom: camera.zoom,
