@@ -3,7 +3,7 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 
     <application
-        android:label="breweries_for_the_world"
+        android:label="Breweries For The World"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
