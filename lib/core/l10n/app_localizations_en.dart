@@ -129,6 +129,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noNearbyBreweries => 'No nearby breweries found.';
 
   @override
+  String get mapLoadError => 'Could not load nearby breweries.';
+
+  @override
+  String get searchError => 'Could not search breweries.';
+
+  @override
+  String get locationPermissionDenied => 'Location permission was denied.';
+
+  @override
+  String get locationServiceDisabled =>
+      'Enable location services to find nearby breweries.';
+
+  @override
   String get retry => 'Retry';
 
   @override

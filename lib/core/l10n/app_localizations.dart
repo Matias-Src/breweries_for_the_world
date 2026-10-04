@@ -320,6 +320,30 @@ abstract class AppLocalizations {
   /// **'No nearby breweries found.'**
   String get noNearbyBreweries;
 
+  /// No description provided for @mapLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load nearby breweries.'**
+  String get mapLoadError;
+
+  /// No description provided for @searchError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not search breweries.'**
+  String get searchError;
+
+  /// No description provided for @locationPermissionDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Location permission was denied.'**
+  String get locationPermissionDenied;
+
+  /// No description provided for @locationServiceDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable location services to find nearby breweries.'**
+  String get locationServiceDisabled;
+
   /// No description provided for @retry.
   ///
   /// In en, this message translates to:

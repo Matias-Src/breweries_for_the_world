@@ -6,7 +6,11 @@ import '../../../../core/l10n/app_localizations.dart';
 import '../../../../core/settings/app_settings_cubit.dart';
 import '../../domain/entities/brewery.dart';
 import '../../domain/entities/user_location.dart';
+import '../../domain/errors/location_permission_denied_exception.dart';
+import '../../domain/errors/location_service_disabled_exception.dart';
+import '../../domain/errors/location_unavailable_exception.dart';
 import '../bloc/nearby_breweries_bloc.dart';
+import '../bloc/nearby_breweries_event.dart';
 import '../bloc/nearby_breweries_state.dart';
 import '../formatters/brewery_address_formatter.dart';
 import '../map/brewery_map_adapter.dart';
@@ -48,13 +52,8 @@ class NearbyBreweriesMapPage extends StatelessWidget {
       drawer: _buildDrawer(context, labels),
       body: BlocBuilder<NearbyBreweriesBloc, NearbyBreweriesState>(
         builder: (context, state) {
-          final success = state is NearbyBreweriesSuccess ? state : null;
-          final location = switch (state) {
-            NearbyBreweriesSuccess(:final location) => location,
-            NearbyBreweriesEmpty(:final location) => location,
-            _ => null,
-          };
-          final breweries = success?.breweries ?? const <Brewery>[];
+          final location = state.location;
+          final breweries = state.breweries;
           final mappedBreweries = breweries
               .where(_hasValidCoordinates)
               .toList(growable: false);
@@ -65,15 +64,14 @@ class NearbyBreweriesMapPage extends StatelessWidget {
               fit: StackFit.expand,
               children: [
                 mapAdapter.buildMap(
-                  userLocation: location != null && _isValidLocation(location)
+                  userLocation: location != null && location.isValid
                       ? location
                       : null,
-                  initialCameraLocation:
-                      location != null && _isValidLocation(location)
+                  initialCameraLocation: location != null && location.isValid
                       ? location
                       : null,
                   breweries: mappedBreweries,
-                  selectedBreweryId: success?.selectedBreweryId,
+                  selectedBreweryId: state.selectedBreweryId,
                   onBrewerySelected: (breweryId) =>
                       mapController.onMarkerSelected(breweries, breweryId),
                 ),
@@ -125,6 +123,19 @@ class NearbyBreweriesMapPage extends StatelessWidget {
                     right: 0,
                     child: Center(child: CircularProgressIndicator()),
                   ),
+                if (state case NearbyBreweriesError errorState)
+                  Positioned(
+                    top: 124,
+                    left: 16,
+                    right: 16,
+                    child: _MapErrorNotice(
+                      message: _errorMessage(context, errorState),
+                      retryLabel: AppLocalizations.of(context)!.retry,
+                      onRetry: () => context.read<NearbyBreweriesBloc>().add(
+                        const RetryRequested(),
+                      ),
+                    ),
+                  ),
                 if (hasCarousel)
                   Positioned(
                     left: 0,
@@ -134,14 +145,14 @@ class NearbyBreweriesMapPage extends StatelessWidget {
                       height: 210,
                       child: _BreweryCarousel(
                         breweries: breweries,
-                        selectedBreweryId: success?.selectedBreweryId,
+                        selectedBreweryId: state.selectedBreweryId,
                         onSelected: mapController.selectBrewery,
                         onDetails: (brewery) =>
                             onOpenBreweryDetails(brewery, location),
                       ),
                     ),
                   ),
-                if (location != null && _isValidLocation(location))
+                if (location != null && location.isValid)
                   Positioned(
                     right: 16,
                     bottom: hasCarousel ? 230 : 24,
@@ -234,11 +245,7 @@ class NearbyBreweriesMapPage extends StatelessWidget {
     NearbyBreweriesState state,
     _NearbyBreweriesLabels labels,
   ) {
-    final activeTypes = switch (state) {
-      NearbyBreweriesSuccess(:final activeTypes) => activeTypes,
-      NearbyBreweriesEmpty(:final activeTypes) => activeTypes,
-      _ => const <String>{},
-    };
+    final activeTypes = state.activeTypes;
     final colorScheme = Theme.of(context).colorScheme;
 
     return SizedBox(
@@ -288,6 +295,60 @@ class NearbyBreweriesMapPage extends StatelessWidget {
       ),
     );
   }
+}
+
+String _errorMessage(BuildContext context, NearbyBreweriesError state) {
+  final l10n = AppLocalizations.of(context)!;
+  if (state.exception is LocationPermissionDeniedException) {
+    return l10n.locationPermissionDenied;
+  }
+  if (state.exception is LocationServiceDisabledException) {
+    return l10n.locationServiceDisabled;
+  }
+  if (state.exception is LocationUnavailableException) {
+    return l10n.locationUnavailable;
+  }
+  return state.isSearchError ? l10n.searchError : l10n.mapLoadError;
+}
+
+class _MapErrorNotice extends StatelessWidget {
+  const _MapErrorNotice({
+    required this.message,
+    required this.retryLabel,
+    required this.onRetry,
+  });
+
+  final String message;
+  final String retryLabel;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: Theme.of(context).colorScheme.errorContainer,
+    borderRadius: BorderRadius.circular(12),
+    elevation: 4,
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Row(
+        children: [
+          Icon(
+            Icons.error_outline,
+            color: Theme.of(context).colorScheme.onErrorContainer,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onErrorContainer,
+              ),
+            ),
+          ),
+          TextButton(onPressed: onRetry, child: Text(retryLabel)),
+        ],
+      ),
+    ),
+  );
 }
 
 class _BrewerySearchField extends StatefulWidget {
@@ -523,7 +584,7 @@ bool _hasValidCoordinates(Brewery brewery) {
   final longitude = brewery.longitude;
   return latitude != null &&
       longitude != null &&
-      _isValidCoordinates(latitude, longitude);
+      UserLocation.areCoordinatesValid(latitude, longitude);
 }
 
 class _NearbyBreweriesLabels {
@@ -547,15 +608,4 @@ class _NearbyBreweriesLabels {
   String get myLocation => l10n.myLocation;
 }
 
-bool _isValidLocation(UserLocation location) =>
-    _isValidCoordinates(location.latitude, location.longitude);
-
 bool _hasText(String? value) => value != null && value.trim().isNotEmpty;
-
-bool _isValidCoordinates(double latitude, double longitude) =>
-    latitude.isFinite &&
-    longitude.isFinite &&
-    latitude >= -90 &&
-    latitude <= 90 &&
-    longitude >= -180 &&
-    longitude <= 180;

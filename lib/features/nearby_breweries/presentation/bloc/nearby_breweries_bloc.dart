@@ -41,22 +41,37 @@ class NearbyBreweriesBloc
   bool _hasLoadedResults = false;
   int _searchRequestId = 0;
   String? _selectedBreweryId;
+  String? _activeSearchQuery;
+  LocationRequested? _lastLocationRequest;
 
   Future<void> _onLocationRequested(
     LocationRequested event,
     Emitter<NearbyBreweriesState> emit,
-  ) => _loadBreweries(event, emit);
+  ) {
+    _lastLocationRequest = event;
+    _activeSearchQuery = null;
+    return _loadBreweries(event, emit);
+  }
 
   Future<void> _onRetryRequested(
     RetryRequested event,
     Emitter<NearbyBreweriesState> emit,
-  ) => _loadBreweries(const LocationRequested(), emit);
+  ) {
+    final query = _activeSearchQuery;
+    if (query != null) {
+      return _onSearchQueryChanged(SearchQueryChanged(query), emit);
+    }
+    return _loadBreweries(
+      _lastLocationRequest ?? const LocationRequested(),
+      emit,
+    );
+  }
 
   Future<void> _loadBreweries(
     LocationRequested event,
     Emitter<NearbyBreweriesState> emit,
   ) async {
-    emit(const NearbyBreweriesLoading());
+    _emitLoading(emit);
     try {
       final location = await _resolveLocation(event);
       final breweries = await _getNearestBreweries(
@@ -66,10 +81,11 @@ class NearbyBreweriesBloc
       _location = location;
       _nearbyBreweries = breweries;
       _searchActive = false;
+      _activeSearchQuery = null;
       _hasLoadedResults = true;
       _emitResults(breweries, emit, location: location);
     } on Exception catch (exception) {
-      emit(NearbyBreweriesError(exception: exception));
+      _emitError(exception, emit);
     }
   }
 
@@ -80,12 +96,14 @@ class NearbyBreweriesBloc
     final requestId = ++_searchRequestId;
     final query = event.query.trim();
     if (query.isEmpty) {
+      _activeSearchQuery = null;
       _searchActive = false;
       if (_hasLoadedResults) {
         _emitResults(_nearbyBreweries, emit, location: _location);
       }
       return;
     }
+    _activeSearchQuery = query;
 
     await Future<void>.delayed(_searchDebounce);
     if (emit.isDone || requestId != _searchRequestId) return;
@@ -95,12 +113,17 @@ class NearbyBreweriesBloc
       emit(
         NearbyBreweriesError(
           exception: StateError('A brewery search provider is not configured.'),
+          isSearchError: true,
+          breweries: _visibleBreweries(_currentBreweries),
+          location: _location,
+          activeTypes: Set.unmodifiable(_activeTypes),
+          selectedBreweryId: _selectedBreweryId,
         ),
       );
       return;
     }
 
-    emit(const NearbyBreweriesLoading());
+    _emitLoading(emit);
     try {
       final breweries = await searchBreweries(query: query);
       if (emit.isDone || requestId != _searchRequestId) return;
@@ -110,7 +133,7 @@ class NearbyBreweriesBloc
       _emitResults(breweries, emit, location: _location);
     } on Exception catch (exception) {
       if (emit.isDone || requestId != _searchRequestId) return;
-      emit(NearbyBreweriesError(exception: exception));
+      _emitError(exception, emit, isSearchError: true);
     }
   }
 
@@ -166,11 +189,7 @@ class NearbyBreweriesBloc
     Emitter<NearbyBreweriesState> emit, {
     required UserLocation? location,
   }) {
-    final visibleBreweries = _activeTypes.isEmpty
-        ? breweries
-        : breweries
-              .where((brewery) => _activeTypes.contains(brewery.breweryType))
-              .toList(growable: false);
+    final visibleBreweries = _visibleBreweries(breweries);
     final activeTypes = Set<String>.unmodifiable(_activeTypes);
 
     if (visibleBreweries.isEmpty) {
@@ -190,6 +209,46 @@ class NearbyBreweriesBloc
         ),
       );
     }
+  }
+
+  NearbyBreweriesLoading _loadingState() => NearbyBreweriesLoading(
+    breweries: _visibleBreweries(_currentBreweries),
+    location: _location,
+    activeTypes: Set.unmodifiable(_activeTypes),
+    selectedBreweryId: _selectedBreweryId,
+  );
+
+  void _emitLoading(Emitter<NearbyBreweriesState> emit) {
+    if (state is NearbyBreweriesLoading) return;
+    emit(_loadingState());
+  }
+
+  List<Brewery> _visibleBreweries(List<Brewery> breweries) => List.unmodifiable(
+    _activeTypes.isEmpty
+        ? breweries
+        : breweries.where(
+            (brewery) => _activeTypes.contains(brewery.breweryType),
+          ),
+  );
+
+  List<Brewery> get _currentBreweries =>
+      _searchActive ? _searchResults : _nearbyBreweries;
+
+  void _emitError(
+    Exception exception,
+    Emitter<NearbyBreweriesState> emit, {
+    bool isSearchError = false,
+  }) {
+    emit(
+      NearbyBreweriesError(
+        exception: exception,
+        isSearchError: isSearchError,
+        breweries: _visibleBreweries(_currentBreweries),
+        location: _location,
+        activeTypes: Set.unmodifiable(_activeTypes),
+        selectedBreweryId: _selectedBreweryId,
+      ),
+    );
   }
 
   Future<UserLocation> _resolveLocation(LocationRequested event) async {

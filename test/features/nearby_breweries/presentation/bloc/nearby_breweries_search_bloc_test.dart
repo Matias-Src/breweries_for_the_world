@@ -127,6 +127,51 @@ void main() {
   );
 
   blocTest<NearbyBreweriesBloc, NearbyBreweriesState>(
+    'retries the failed search query instead of loading nearby breweries',
+    setUp: () {
+      var attempts = 0;
+      when(() => repository.searchBreweries(query: 'brewery')).thenAnswer((
+        _,
+      ) async {
+        attempts++;
+        if (attempts == 1) throw const NetworkException();
+        return [searchResult];
+      });
+    },
+    build: () => NearbyBreweriesBloc(
+      getNearestBreweries: getNearestBreweries,
+      searchBreweries: searchBreweries,
+    ),
+    act: (bloc) async {
+      final failed = bloc.stream.firstWhere(
+        (state) => state is NearbyBreweriesError,
+      );
+      bloc.add(const SearchQueryChanged('brewery'));
+      await failed;
+
+      final retried = bloc.stream.firstWhere(
+        (state) =>
+            state is NearbyBreweriesSuccess &&
+            state.breweries.single.id == searchResult.id,
+      );
+      bloc.add(const RetryRequested());
+      await retried;
+    },
+    expect: () => [
+      isA<NearbyBreweriesLoading>(),
+      isA<NearbyBreweriesError>(),
+      isA<NearbyBreweriesLoading>(),
+      isA<NearbyBreweriesSuccess>().having(
+        (state) => state.breweries,
+        'retried search results',
+        [searchResult],
+      ),
+    ],
+    verify: (_) =>
+        verify(() => repository.searchBreweries(query: 'brewery')).called(2),
+  );
+
+  blocTest<NearbyBreweriesBloc, NearbyBreweriesState>(
     'ignores an older search response after a newer query completes',
     setUp: () {
       oldSearch = Completer<List<Brewery>>();

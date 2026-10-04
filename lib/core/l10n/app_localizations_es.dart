@@ -130,6 +130,19 @@ class AppLocalizationsEs extends AppLocalizations {
   String get noNearbyBreweries => 'No se encontraron cervecerías cercanas.';
 
   @override
+  String get mapLoadError => 'No se pudieron cargar las cervecerías cercanas.';
+
+  @override
+  String get searchError => 'No se pudieron buscar cervecerías.';
+
+  @override
+  String get locationPermissionDenied => 'Se denegó el permiso de ubicación.';
+
+  @override
+  String get locationServiceDisabled =>
+      'Activa los servicios de ubicación para buscar cervecerías cercanas.';
+
+  @override
   String get retry => 'Reintentar';
 
   @override

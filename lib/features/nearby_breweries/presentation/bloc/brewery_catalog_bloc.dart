@@ -36,7 +36,7 @@ class BreweryCatalogBloc
   final int pageSize;
   static const _searchDebounce = Duration(milliseconds: 300);
 
-  List<Brewery> _catalogBreweries = const [];
+  final List<Brewery> _catalogBreweries = [];
   List<Brewery> _searchResults = const [];
   bool _searchActive = false;
   bool _catalogHasMore = true;
@@ -212,7 +212,7 @@ class BreweryCatalogBloc
   Future<void> _loadPage(int page, Emitter<BreweryCatalogState> emit) async {
     try {
       final breweries = await _getBreweries(page: page, perPage: pageSize);
-      _catalogBreweries = [..._catalogBreweries, ...breweries];
+      _catalogBreweries.addAll(breweries);
       _catalogHasMore = breweries.length == pageSize;
       _emitVisibleBreweries(emit, currentPage: page);
     } on Exception catch (exception) {
