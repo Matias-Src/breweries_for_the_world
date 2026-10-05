@@ -10,6 +10,20 @@ void main() {
     expect(config.mapboxAccessToken, 'pk.test-token');
   });
 
+  test('accepts and trims a Mapbox token from the generated environment', () {
+    final config = AppConfig.fromMapboxToken(' pk.generated-token ');
+
+    expect(config.mapboxAccessToken, 'pk.generated-token');
+  });
+
+  test('rejects a missing generated Mapbox token', () {
+    expect(() => AppConfig.fromMapboxToken(null), throwsA(isA<StateError>()));
+  });
+
+  test('rejects a blank generated Mapbox token', () {
+    expect(() => AppConfig.fromMapboxToken('  '), throwsA(isA<StateError>()));
+  });
+
   test('fails clearly when the Mapbox token is missing', () {
     expect(
       () => AppConfig.fromEnvironment(const {}),
