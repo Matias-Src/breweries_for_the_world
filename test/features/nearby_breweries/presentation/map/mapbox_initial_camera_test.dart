@@ -155,6 +155,42 @@ void main() {
     expect(camera.center!.coordinates.lng, location.longitude);
   });
 
+  testWidgets('centers the brewery when its route is unavailable', (
+    tester,
+  ) async {
+    final platform = _RecordingMapboxPlatform();
+    final previousPlatform = _installPlatform(platform);
+    addTearDown(() => _restorePlatform(previousPlatform));
+    final adapter = MapboxBreweryMapAdapter();
+    const userLocation = UserLocation(latitude: 40.7, longitude: -73.9);
+    const brewery = Brewery(
+      id: 'selected-brewery',
+      name: 'Selected Brewery',
+      breweryType: 'micro',
+      latitude: 41.3,
+      longitude: -72.5,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SizedBox.expand(
+          child: adapter.buildBreweryMap(
+            brewery: brewery,
+            userLocation: userLocation,
+            route: null,
+            bottomPanelHeight: 200,
+          ),
+        ),
+      ),
+    );
+
+    final camera = platform.viewports.single! as CameraViewportState;
+    expect(camera.center!.coordinates.lat, brewery.latitude);
+    expect(camera.center!.coordinates.lng, brewery.longitude);
+    expect(camera.center!.coordinates.lat, isNot(userLocation.latitude));
+    expect(camera.zoom, 12);
+  });
+
   testWidgets('does not reset a user-moved camera when brewery data changes', (
     tester,
   ) async {

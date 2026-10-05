@@ -46,7 +46,11 @@ class MapboxBreweryMapAdapter implements BreweryMapAdapter {
     final destinationLocation = latitude != null && longitude != null
         ? UserLocation(latitude: latitude, longitude: longitude)
         : null;
-    final cameraLocation = userLocation ?? destinationLocation;
+    final hasRouteGeometry = route != null && route.coordinates.length >= 2;
+    final cameraLocation =
+        !hasRouteGeometry && destinationLocation?.isValid == true
+        ? destinationLocation
+        : userLocation ?? destinationLocation;
 
     return _MapboxMapSurface(
       key: ValueKey('mapbox-brewery-map-${brewery.id}'),
