@@ -1,5 +1,6 @@
 import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:injectable/injectable.dart';
 
 import '../../domain/entities/brewery.dart';
 import '../../domain/usecases/get_brewery_page.dart';
@@ -7,12 +8,13 @@ import '../../domain/usecases/search_breweries.dart';
 import 'brewery_catalog_event.dart';
 import 'brewery_catalog_state.dart';
 
+@injectable
 class BreweryCatalogBloc
     extends Bloc<BreweryCatalogEvent, BreweryCatalogState> {
   BreweryCatalogBloc({
     required GetBreweryPage getBreweries,
     required SearchBreweries searchBreweries,
-    this.pageSize = 20,
+    @ignoreParam this.pageSize = 20,
   }) : _getBreweries = getBreweries,
        _searchBreweries = searchBreweries,
        super(const BreweryCatalogState()) {

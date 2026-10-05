@@ -1,4 +1,5 @@
 import 'package:geolocator/geolocator.dart' as geo;
+import 'package:injectable/injectable.dart';
 
 import '../../domain/entities/user_location.dart';
 import '../../domain/errors/location_permission_denied_exception.dart';
@@ -9,6 +10,7 @@ abstract interface class LocationDataSource {
   Future<UserLocation> getCurrentLocation();
 }
 
+@LazySingleton(as: LocationDataSource)
 class LocationDataSourceImpl implements LocationDataSource {
   LocationDataSourceImpl({required geo.GeolocatorPlatform geolocatorPlatform})
     : _geolocatorPlatform = geolocatorPlatform;

@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:injectable/injectable.dart';
 
 import '../../domain/entities/brewery_route.dart';
 import '../../domain/entities/route_mode.dart';
@@ -9,6 +10,7 @@ import '../../domain/errors/server_exception.dart';
 import '../../domain/repositories/brewery_route_repository.dart';
 import '../datasources/mapbox_directions_remote_data_source.dart';
 
+@LazySingleton(as: BreweryRouteRepository)
 class MapboxDirectionsRepositoryImpl implements BreweryRouteRepository {
   const MapboxDirectionsRepositoryImpl({required this.dataSource});
 

@@ -1,5 +1,6 @@
 import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:injectable/injectable.dart';
 
 import '../../domain/entities/brewery.dart';
 import '../../domain/entities/user_location.dart';
@@ -10,6 +11,7 @@ import '../../domain/usecases/search_breweries.dart';
 import 'nearby_breweries_event.dart';
 import 'nearby_breweries_state.dart';
 
+@injectable
 class NearbyBreweriesBloc
     extends Bloc<NearbyBreweriesEvent, NearbyBreweriesState> {
   NearbyBreweriesBloc({

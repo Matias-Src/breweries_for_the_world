@@ -1,8 +1,11 @@
+import 'package:injectable/injectable.dart';
+
 import '../entities/brewery_route.dart';
 import '../entities/route_mode.dart';
 import '../entities/user_location.dart';
 import '../repositories/brewery_route_repository.dart';
 
+@lazySingleton
 class GetBreweryRoute {
   const GetBreweryRoute(this._repository);
 

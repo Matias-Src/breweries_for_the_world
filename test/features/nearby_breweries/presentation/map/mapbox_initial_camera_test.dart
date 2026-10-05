@@ -1,6 +1,8 @@
 // ignore_for_file: depend_on_referenced_packages
 
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/entities/brewery.dart';
+import 'package:breweries_for_the_world/features/nearby_breweries/domain/entities/brewery_route.dart';
+import 'package:breweries_for_the_world/features/nearby_breweries/domain/entities/route_mode.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/entities/user_location.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/presentation/map/mapbox_brewery_map_adapter.dart';
 import 'package:flutter/foundation.dart';
@@ -189,6 +191,59 @@ void main() {
     expect(camera.center!.coordinates.lng, brewery.longitude);
     expect(camera.center!.coordinates.lat, isNot(userLocation.latitude));
     expect(camera.zoom, 12);
+  });
+
+  testWidgets('keeps the brewery as initial camera target when route loads', (
+    tester,
+  ) async {
+    final platform = _RecordingMapboxPlatform();
+    final previousPlatform = _installPlatform(platform);
+    addTearDown(() => _restorePlatform(previousPlatform));
+    final adapter = MapboxBreweryMapAdapter();
+    const userLocation = UserLocation(latitude: 40.7, longitude: -73.9);
+    const brewery = Brewery(
+      id: 'selected-brewery',
+      name: 'Selected Brewery',
+      breweryType: 'micro',
+      latitude: 41.3,
+      longitude: -72.5,
+    );
+    BreweryRoute? route;
+    late StateSetter rebuildMap;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: StatefulBuilder(
+          builder: (context, setState) {
+            rebuildMap = setState;
+            return SizedBox.expand(
+              child: adapter.buildBreweryMap(
+                brewery: brewery,
+                userLocation: userLocation,
+                route: route,
+                bottomPanelHeight: 200,
+              ),
+            );
+          },
+        ),
+      ),
+    );
+
+    route = const BreweryRoute(
+      mode: RouteMode.walking,
+      coordinates: [
+        userLocation,
+        UserLocation(latitude: 41.3, longitude: -72.5),
+      ],
+      distanceMeters: 1000,
+      durationSeconds: 600,
+    );
+    rebuildMap(() {});
+    await tester.pumpAndSettle();
+
+    final camera = platform.viewports.last! as CameraViewportState;
+    expect(camera.center!.coordinates.lat, brewery.latitude);
+    expect(camera.center!.coordinates.lng, brewery.longitude);
   });
 
   testWidgets('does not reset a user-moved camera when brewery data changes', (

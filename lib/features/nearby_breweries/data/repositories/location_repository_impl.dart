@@ -1,7 +1,10 @@
+import 'package:injectable/injectable.dart';
+
 import '../../domain/entities/user_location.dart';
 import '../../domain/repositories/location_repository.dart';
 import '../datasources/location_data_source.dart';
 
+@LazySingleton(as: LocationRepository)
 class LocationRepositoryImpl implements LocationRepository {
   const LocationRepositoryImpl({required LocationDataSource dataSource})
     : _dataSource = dataSource;

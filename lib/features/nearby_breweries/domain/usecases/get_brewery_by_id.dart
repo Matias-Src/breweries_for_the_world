@@ -1,6 +1,9 @@
+import 'package:injectable/injectable.dart';
+
 import '../entities/brewery.dart';
 import '../repositories/brewery_repository.dart';
 
+@lazySingleton
 class GetBreweryById {
   const GetBreweryById(this._repository);
 

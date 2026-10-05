@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:injectable/injectable.dart';
 
 import '../../domain/entities/brewery.dart';
 import '../../domain/errors/network_exception.dart';
@@ -8,6 +9,7 @@ import '../../domain/repositories/brewery_repository.dart';
 import '../../domain/services/distance_calculator.dart';
 import '../datasources/brewery_remote_data_source.dart';
 
+@LazySingleton(as: BreweryRepository)
 class BreweryRepositoryImpl implements BreweryRepository {
   BreweryRepositoryImpl({required BreweryRemoteDataSource remoteDataSource})
     : _remoteDataSource = remoteDataSource;

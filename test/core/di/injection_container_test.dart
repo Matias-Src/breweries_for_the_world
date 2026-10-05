@@ -37,6 +37,13 @@ void main() {
       );
 
       expect(
+        identical(
+          container<AppConfig>(),
+          container<AppConfig>(),
+        ),
+        isTrue,
+      );
+      expect(
         container<Dio>().options.baseUrl,
         'https://api.openbrewerydb.org/v1',
       );
@@ -62,6 +69,20 @@ void main() {
       expect(container<GetBreweryRoute>(), isA<GetBreweryRoute>());
       expect(container<NearbyBreweriesBloc>(), isA<NearbyBreweriesBloc>());
       expect(container<BreweryCatalogBloc>(), isA<BreweryCatalogBloc>());
+      expect(
+        identical(
+          container<BreweryRepository>(),
+          container<BreweryRepository>(),
+        ),
+        isTrue,
+      );
+      expect(
+        identical(
+          container<NearbyBreweriesBloc>(),
+          container<NearbyBreweriesBloc>(),
+        ),
+        isFalse,
+      );
     },
   );
 }

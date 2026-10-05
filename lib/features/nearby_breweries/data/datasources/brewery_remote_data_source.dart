@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:injectable/injectable.dart';
 
 import '../models/brewery_dto.dart';
 
@@ -20,6 +21,7 @@ abstract interface class BreweryRemoteDataSource {
   Future<List<BreweryDto>> searchBreweries({required String query});
 }
 
+@LazySingleton(as: BreweryRemoteDataSource)
 class BreweryRemoteDataSourceImpl implements BreweryRemoteDataSource {
   BreweryRemoteDataSourceImpl({required Dio dio}) : _dio = dio;
 
