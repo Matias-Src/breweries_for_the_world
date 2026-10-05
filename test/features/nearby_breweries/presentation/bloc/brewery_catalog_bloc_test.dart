@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/entities/brewery.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/repositories/brewery_repository.dart';
@@ -199,5 +201,64 @@ void main() {
     ],
     verify: (_) =>
         verify(() => repository.searchBreweries(query: 'stone')).called(1),
+  );
+
+  blocTest<BreweryCatalogBloc, BreweryCatalogState>(
+    'does not replace latest search results when an older response completes',
+    build: () => BreweryCatalogBloc(
+      getBreweries: GetBreweryPage(repository),
+      searchBreweries: SearchBreweries(repository),
+    ),
+    act: (bloc) async {
+      final oldSearch = Completer<List<Brewery>>();
+      final newSearch = Completer<List<Brewery>>();
+      when(
+        () => repository.searchBreweries(query: 'old'),
+      ).thenAnswer((_) => oldSearch.future);
+      when(
+        () => repository.searchBreweries(query: 'new'),
+      ).thenAnswer((_) => newSearch.future);
+
+      final latestResults = bloc.stream.firstWhere(
+        (state) =>
+            state.query == 'new' &&
+            state.breweries.any((brewery) => brewery.id == 'new'),
+      );
+      bloc.add(const BreweryCatalogSearchChanged('old'));
+      await Future<void>.delayed(const Duration(milliseconds: 350));
+      bloc.add(const BreweryCatalogSearchChanged('new'));
+      await Future<void>.delayed(const Duration(milliseconds: 350));
+      newSearch.complete(
+        const [Brewery(id: 'new', name: 'New', breweryType: 'micro')],
+      );
+      await latestResults;
+      oldSearch.complete(
+        const [Brewery(id: 'old', name: 'Old', breweryType: 'micro')],
+      );
+      await Future<void>.delayed(Duration.zero);
+      bloc.add(const BreweryCatalogTypesChanged({'micro'}));
+    },
+    expect: () => [
+      isA<BreweryCatalogState>().having(
+        (state) => state.isLoading,
+        'search loading',
+        true,
+      ),
+      isA<BreweryCatalogState>().having(
+        (state) => state.isLoading,
+        'latest search loading',
+        true,
+      ),
+      isA<BreweryCatalogState>().having(
+        (state) => state.breweries.map((brewery) => brewery.id).toList(),
+        'latest search results',
+        ['new'],
+      ),
+      isA<BreweryCatalogState>().having(
+        (state) => state.breweries.map((brewery) => brewery.id).toList(),
+        'latest results after filtering',
+        ['new'],
+      ),
+    ],
   );
 }

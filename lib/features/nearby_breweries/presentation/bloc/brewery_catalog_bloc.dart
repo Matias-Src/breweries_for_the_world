@@ -107,8 +107,9 @@ class BreweryCatalogBloc
       ),
     );
     try {
-      _searchResults = await _searchBreweries(query: query);
+      final results = await _searchBreweries(query: query);
       if (emit.isDone) return;
+      _searchResults = results;
       _emitVisibleBreweries(emit, query: query);
     } on Exception catch (exception) {
       if (emit.isDone) return;
