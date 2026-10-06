@@ -2,10 +2,11 @@ import 'package:breweries_for_the_world/core/navigation/app_router.dart';
 import 'package:breweries_for_the_world/core/l10n/app_localizations.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/entities/brewery.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/repositories/brewery_repository.dart';
+import 'package:breweries_for_the_world/features/nearby_breweries/domain/services/website_launcher.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/usecases/get_brewery_by_id.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/usecases/get_brewery_page.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/usecases/search_breweries.dart';
-import 'package:breweries_for_the_world/features/nearby_breweries/presentation/bloc/brewery_catalog_bloc.dart';
+import 'package:breweries_for_the_world/features/nearby_breweries/presentation/bloc/brewery_catalog_bloc/brewery_catalog_bloc.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/presentation/map/brewery_map_adapter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -20,11 +21,11 @@ void main() {
       initialLocation: '/breweries/route-brewery',
       mapAdapter: _EmptyMapAdapter(),
       getBreweryById: GetBreweryById(repository),
-      createCatalogBloc: () =>
-          BreweryCatalogBloc(
-            getBreweries: GetBreweryPage(repository),
-            searchBreweries: SearchBreweries(repository),
-          ),
+      websiteLauncher: _EmptyWebsiteLauncher(),
+      createCatalogBloc: () => BreweryCatalogBloc(
+        getBreweries: GetBreweryPage(repository),
+        searchBreweries: SearchBreweries(repository),
+      ),
     );
     addTearDown(appRouter.dispose);
 
@@ -43,11 +44,11 @@ void main() {
       initialLocation: '/breweries',
       mapAdapter: _EmptyMapAdapter(),
       getBreweryById: GetBreweryById(repository),
-      createCatalogBloc: () =>
-          BreweryCatalogBloc(
-            getBreweries: GetBreweryPage(repository),
-            searchBreweries: SearchBreweries(repository),
-          ),
+      websiteLauncher: _EmptyWebsiteLauncher(),
+      createCatalogBloc: () => BreweryCatalogBloc(
+        getBreweries: GetBreweryPage(repository),
+        searchBreweries: SearchBreweries(repository),
+      ),
     );
     addTearDown(appRouter.dispose);
 
@@ -124,6 +125,11 @@ class _RouteTestRepository implements BreweryRepository {
 
   @override
   Future<List<Brewery>> searchBreweries({required String query}) async => [];
+}
+
+class _EmptyWebsiteLauncher implements WebsiteLauncher {
+  @override
+  Future<void> launch(Uri uri) async {}
 }
 
 class _EmptyMapAdapter implements BreweryMapAdapter {

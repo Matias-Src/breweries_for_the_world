@@ -10,11 +10,11 @@ import 'core/di/injection_container.dart';
 import 'core/l10n/app_localizations.dart';
 import 'core/navigation/app_router.dart';
 import 'core/settings/app_settings_cubit.dart';
-import 'features/nearby_breweries/presentation/bloc/brewery_catalog_bloc.dart';
-import 'features/nearby_breweries/presentation/bloc/nearby_breweries_bloc.dart';
-import 'features/nearby_breweries/presentation/bloc/nearby_breweries_event.dart';
+import 'features/nearby_breweries/presentation/bloc/brewery_catalog_bloc/brewery_catalog_bloc.dart';
+import 'features/nearby_breweries/presentation/bloc/nearby_breweries_bloc/nearby_breweries_bloc.dart';
 import 'features/nearby_breweries/domain/usecases/get_brewery_by_id.dart';
 import 'features/nearby_breweries/domain/usecases/get_brewery_route.dart';
+import 'features/nearby_breweries/domain/services/website_launcher.dart';
 import 'features/nearby_breweries/presentation/map/mapbox_brewery_map_adapter.dart';
 
 Future<void> main() async {
@@ -30,6 +30,7 @@ Future<void> main() async {
       final appRouter = AppRouter(
         mapAdapter: MapboxBreweryMapAdapter(),
         getBreweryById: getIt<GetBreweryById>(),
+        websiteLauncher: getIt<WebsiteLauncher>(),
         createCatalogBloc: () => getIt<BreweryCatalogBloc>(),
         getBreweryRoute: getIt<GetBreweryRoute>(),
       );

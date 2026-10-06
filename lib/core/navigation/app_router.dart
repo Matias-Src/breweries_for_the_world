@@ -8,11 +8,11 @@ import '../../features/nearby_breweries/domain/entities/brewery.dart';
 import '../../features/nearby_breweries/domain/entities/user_location.dart';
 import '../../features/nearby_breweries/domain/usecases/get_brewery_by_id.dart';
 import '../../features/nearby_breweries/domain/usecases/get_brewery_route.dart';
-import '../../features/nearby_breweries/presentation/bloc/brewery_catalog_bloc.dart';
-import '../../features/nearby_breweries/presentation/bloc/brewery_catalog_event.dart';
-import '../../features/nearby_breweries/presentation/bloc/brewery_detail_cubit.dart';
-import '../../features/nearby_breweries/presentation/bloc/nearby_breweries_bloc.dart';
-import '../../features/nearby_breweries/presentation/bloc/nearby_breweries_state.dart';
+import '../../features/nearby_breweries/domain/services/website_launcher.dart';
+import '../../features/nearby_breweries/presentation/bloc/brewery_catalog_bloc/brewery_catalog_bloc.dart';
+import '../../features/nearby_breweries/presentation/bloc/brewery_catalog_bloc/brewery_catalog_event.dart';
+import '../../features/nearby_breweries/presentation/bloc/brewery_detail_cubit/brewery_detail_cubit.dart';
+import '../../features/nearby_breweries/presentation/bloc/nearby_breweries_bloc/nearby_breweries_bloc.dart';
 import '../../features/nearby_breweries/presentation/pages/brewery_catalog_page.dart';
 import '../../features/nearby_breweries/presentation/pages/brewery_detail_page.dart';
 import '../../features/nearby_breweries/presentation/pages/nearby_breweries_map_page.dart';
@@ -38,6 +38,7 @@ class AppRouter {
   AppRouter({
     required BreweryMapAdapter mapAdapter,
     required GetBreweryById getBreweryById,
+    required WebsiteLauncher websiteLauncher,
     required BreweryCatalogBloc Function() createCatalogBloc,
     GetBreweryRoute? getBreweryRoute,
     this.initialLocation = AppRoutes.nearby,
@@ -107,6 +108,7 @@ class AppRouter {
                  create: (_) => BreweryDetailCubit(
                    breweryId: id,
                    getBreweryById: getBreweryById,
+                   websiteLauncher: websiteLauncher,
                    mapRoute: getBreweryRoute,
                    userLocation: extra.userLocation,
                    initialBrewery: extra.brewery,

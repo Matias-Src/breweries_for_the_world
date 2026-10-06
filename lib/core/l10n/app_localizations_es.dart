@@ -37,6 +37,9 @@ class AppLocalizationsEs extends AppLocalizations {
       'No se pudieron cargar los detalles de la cervecería.';
 
   @override
+  String get breweryNotFound => 'No se encontró esta cervecería.';
+
+  @override
   String get walking => 'A pie';
 
   @override

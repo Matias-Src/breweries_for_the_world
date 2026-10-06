@@ -6,6 +6,15 @@ import 'package:injectable/injectable.dart';
 import 'injection_container.config.dart';
 
 import '../../features/nearby_breweries/data/datasources/mapbox_directions_remote_data_source.dart';
+import '../../features/nearby_breweries/domain/repositories/brewery_repository.dart';
+import '../../features/nearby_breweries/domain/repositories/brewery_route_repository.dart';
+import '../../features/nearby_breweries/domain/repositories/location_repository.dart';
+import '../../features/nearby_breweries/domain/usecases/get_brewery_by_id.dart';
+import '../../features/nearby_breweries/domain/usecases/get_brewery_page.dart';
+import '../../features/nearby_breweries/domain/usecases/get_brewery_route.dart';
+import '../../features/nearby_breweries/domain/usecases/get_current_location.dart';
+import '../../features/nearby_breweries/domain/usecases/get_nearest_breweries.dart';
+import '../../features/nearby_breweries/domain/usecases/search_breweries.dart';
 import '../config/app_config.dart';
 
 final GetIt getIt = GetIt.instance;
@@ -37,4 +46,31 @@ abstract class ExternalDependenciesModule {
     dio: dio,
     accessToken: config.mapboxAccessToken,
   );
+}
+
+@module
+abstract class UseCasesModule {
+  @lazySingleton
+  GetBreweryById getBreweryById(BreweryRepository repository) =>
+      GetBreweryById(repository);
+
+  @lazySingleton
+  GetBreweryPage getBreweryPage(BreweryRepository repository) =>
+      GetBreweryPage(repository);
+
+  @lazySingleton
+  GetBreweryRoute getBreweryRoute(BreweryRouteRepository repository) =>
+      GetBreweryRoute(repository);
+
+  @lazySingleton
+  GetCurrentLocation getCurrentLocation(LocationRepository repository) =>
+      GetCurrentLocation(repository);
+
+  @lazySingleton
+  GetNearestBreweries getNearestBreweries(BreweryRepository repository) =>
+      GetNearestBreweries(repository);
+
+  @lazySingleton
+  SearchBreweries searchBreweries(BreweryRepository repository) =>
+      SearchBreweries(repository);
 }

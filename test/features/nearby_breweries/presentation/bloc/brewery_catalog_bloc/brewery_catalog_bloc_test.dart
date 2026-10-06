@@ -5,9 +5,9 @@ import 'package:breweries_for_the_world/features/nearby_breweries/domain/entitie
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/repositories/brewery_repository.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/usecases/get_brewery_page.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/usecases/search_breweries.dart';
-import 'package:breweries_for_the_world/features/nearby_breweries/presentation/bloc/brewery_catalog_bloc.dart';
-import 'package:breweries_for_the_world/features/nearby_breweries/presentation/bloc/brewery_catalog_event.dart';
-import 'package:breweries_for_the_world/features/nearby_breweries/presentation/bloc/brewery_catalog_state.dart';
+import 'package:breweries_for_the_world/features/nearby_breweries/presentation/bloc/brewery_catalog_bloc/brewery_catalog_bloc.dart';
+import 'package:breweries_for_the_world/features/nearby_breweries/presentation/bloc/brewery_catalog_bloc/brewery_catalog_event.dart';
+import 'package:breweries_for_the_world/features/nearby_breweries/presentation/bloc/brewery_catalog_bloc/brewery_catalog_state.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -204,6 +204,33 @@ void main() {
   );
 
   blocTest<BreweryCatalogBloc, BreweryCatalogState>(
+    'emits a distinct empty state when a search has no results',
+    setUp: () {
+      when(
+        () => repository.searchBreweries(query: 'unknown'),
+      ).thenAnswer((_) async => const []);
+    },
+    build: () => BreweryCatalogBloc(
+      getBreweries: GetBreweryPage(repository),
+      searchBreweries: SearchBreweries(repository),
+    ),
+    act: (bloc) => bloc.add(const BreweryCatalogSearchChanged('unknown')),
+    wait: const Duration(milliseconds: 350),
+    expect: () => [
+      isA<BreweryCatalogState>().having(
+        (state) => state.runtimeType.toString(),
+        'loading variant',
+        'BreweryCatalogLoading',
+      ),
+      isA<BreweryCatalogState>().having(
+        (state) => state.runtimeType.toString(),
+        'empty variant',
+        'BreweryCatalogEmpty',
+      ),
+    ],
+  );
+
+  blocTest<BreweryCatalogBloc, BreweryCatalogState>(
     'does not replace latest search results when an older response completes',
     build: () => BreweryCatalogBloc(
       getBreweries: GetBreweryPage(repository),
@@ -228,13 +255,13 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 350));
       bloc.add(const BreweryCatalogSearchChanged('new'));
       await Future<void>.delayed(const Duration(milliseconds: 350));
-      newSearch.complete(
-        const [Brewery(id: 'new', name: 'New', breweryType: 'micro')],
-      );
+      newSearch.complete(const [
+        Brewery(id: 'new', name: 'New', breweryType: 'micro'),
+      ]);
       await latestResults;
-      oldSearch.complete(
-        const [Brewery(id: 'old', name: 'Old', breweryType: 'micro')],
-      );
+      oldSearch.complete(const [
+        Brewery(id: 'old', name: 'Old', breweryType: 'micro'),
+      ]);
       await Future<void>.delayed(Duration.zero);
       bloc.add(const BreweryCatalogTypesChanged({'micro'}));
     },

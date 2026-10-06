@@ -2,6 +2,7 @@ import 'package:breweries_for_the_world/features/nearby_breweries/data/datasourc
 import 'package:breweries_for_the_world/features/nearby_breweries/data/models/brewery_dto.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/data/repositories/brewery_repository_impl.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/entities/brewery.dart';
+import 'package:breweries_for_the_world/features/nearby_breweries/domain/errors/brewery_not_found_exception.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/errors/network_exception.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/errors/parsing_exception.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/repositories/brewery_repository.dart';
@@ -54,6 +55,26 @@ void main() {
     expect(brewery.name, "'s");
     expect(brewery.city, 'Kronach');
   });
+
+  test(
+    'maps a missing brewery response to a typed not-found exception',
+    () async {
+      when(() => dataSource.getBreweryById(id: 'missing')).thenThrow(
+        DioException(
+          requestOptions: RequestOptions(path: '/breweries/missing'),
+          response: Response<dynamic>(
+            requestOptions: RequestOptions(path: '/breweries/missing'),
+            statusCode: 404,
+          ),
+        ),
+      );
+
+      await expectLater(
+        repository.getBreweryById(id: 'missing'),
+        throwsA(isA<BreweryNotFoundException>()),
+      );
+    },
+  );
 
   test('maps a requested brewery page into domain entities', () async {
     when(

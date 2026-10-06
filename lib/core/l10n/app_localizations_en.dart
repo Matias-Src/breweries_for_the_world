@@ -36,6 +36,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get breweryDetailsLoadError => 'Could not load brewery details.';
 
   @override
+  String get breweryNotFound => 'This brewery could not be found.';
+
+  @override
   String get walking => 'Walk';
 
   @override

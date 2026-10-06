@@ -2,9 +2,9 @@ import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:injectable/injectable.dart';
 
-import '../../domain/entities/brewery.dart';
-import '../../domain/usecases/get_brewery_page.dart';
-import '../../domain/usecases/search_breweries.dart';
+import '../../../domain/entities/brewery.dart';
+import '../../../domain/usecases/get_brewery_page.dart';
+import '../../../domain/usecases/search_breweries.dart';
 import 'brewery_catalog_event.dart';
 import 'brewery_catalog_state.dart';
 
@@ -17,7 +17,7 @@ class BreweryCatalogBloc
     @ignoreParam this.pageSize = 20,
   }) : _getBreweries = getBreweries,
        _searchBreweries = searchBreweries,
-       super(const BreweryCatalogState()) {
+       super(const BreweryCatalogInitial()) {
     on<BreweryCatalogStarted>(_onStarted, transformer: droppable());
     on<BreweryCatalogNextPageRequested>(
       _onNextPageRequested,
@@ -49,7 +49,15 @@ class BreweryCatalogBloc
   ) async {
     if (state.currentPage != 0 || state.isLoading) return;
     emit(
-      state.copyWith(status: BreweryCatalogStatus.loading, clearError: true),
+      BreweryCatalogLoading(
+        breweries: state.breweries,
+        currentPage: state.currentPage,
+        hasMore: state.hasMore,
+        isLoadingMore: false,
+        query: state.query,
+        activeTypes: state.activeTypes,
+        sortOrder: state.sortOrder,
+      ),
     );
     await _loadPage(1, emit);
   }
@@ -64,7 +72,17 @@ class BreweryCatalogBloc
         state.isLoadingMore) {
       return;
     }
-    emit(state.copyWith(isLoadingMore: true, clearError: true));
+    emit(
+      _stateWithResults(
+        breweries: state.breweries,
+        currentPage: state.currentPage,
+        hasMore: state.hasMore,
+        isLoadingMore: true,
+        query: state.query,
+        activeTypes: state.activeTypes,
+        sortOrder: state.sortOrder,
+      ),
+    );
     await _loadPage(state.currentPage + 1, emit);
   }
 
@@ -97,13 +115,13 @@ class BreweryCatalogBloc
 
     _searchActive = true;
     emit(
-      state.copyWith(
-        status: BreweryCatalogStatus.loading,
-        breweries: const [],
+      BreweryCatalogLoading(
         query: query,
         hasMore: false,
         isLoadingMore: false,
-        clearError: true,
+        currentPage: state.currentPage,
+        activeTypes: state.activeTypes,
+        sortOrder: state.sortOrder,
       ),
     );
     try {
@@ -114,10 +132,14 @@ class BreweryCatalogBloc
     } on Exception catch (exception) {
       if (emit.isDone) return;
       emit(
-        state.copyWith(
-          status: BreweryCatalogStatus.error,
-          query: query,
+        BreweryCatalogError(
           error: exception,
+          breweries: state.breweries,
+          currentPage: state.currentPage,
+          hasMore: false,
+          query: query,
+          activeTypes: state.activeTypes,
+          sortOrder: state.sortOrder,
         ),
       );
     }
@@ -163,16 +185,14 @@ class BreweryCatalogBloc
         .toList();
     _sortBreweries(filtered, selectedSortOrder);
     emit(
-      state.copyWith(
-        status: BreweryCatalogStatus.success,
+      _stateWithResults(
         breweries: filtered,
-        currentPage: currentPage,
+        currentPage: currentPage ?? state.currentPage,
+        hasMore: _searchActive ? false : _catalogHasMore,
+        isLoadingMore: false,
         query: query ?? state.query,
         activeTypes: selectedTypes,
         sortOrder: selectedSortOrder,
-        hasMore: _searchActive ? false : _catalogHasMore,
-        isLoadingMore: false,
-        clearError: true,
       ),
     );
   }
@@ -220,14 +240,46 @@ class BreweryCatalogBloc
       _emitVisibleBreweries(emit, currentPage: page);
     } on Exception catch (exception) {
       emit(
-        state.copyWith(
-          status: state.currentPage == 0
-              ? BreweryCatalogStatus.error
-              : BreweryCatalogStatus.success,
-          isLoadingMore: false,
+        BreweryCatalogError(
           error: exception,
+          breweries: state.breweries,
+          currentPage: state.currentPage,
+          hasMore: state.hasMore,
+          query: state.query,
+          activeTypes: state.activeTypes,
+          sortOrder: state.sortOrder,
         ),
       );
     }
+  }
+
+  BreweryCatalogState _stateWithResults({
+    required List<Brewery> breweries,
+    required int currentPage,
+    required bool hasMore,
+    required bool isLoadingMore,
+    required String query,
+    required Set<String> activeTypes,
+    required BreweryCatalogSortOrder sortOrder,
+  }) {
+    if (breweries.isEmpty) {
+      return BreweryCatalogEmpty(
+        currentPage: currentPage,
+        hasMore: hasMore,
+        isLoadingMore: isLoadingMore,
+        query: query,
+        activeTypes: activeTypes,
+        sortOrder: sortOrder,
+      );
+    }
+    return BreweryCatalogSuccess(
+      breweries: breweries,
+      currentPage: currentPage,
+      hasMore: hasMore,
+      isLoadingMore: isLoadingMore,
+      query: query,
+      activeTypes: activeTypes,
+      sortOrder: sortOrder,
+    );
   }
 }

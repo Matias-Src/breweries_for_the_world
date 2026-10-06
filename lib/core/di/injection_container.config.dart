@@ -25,12 +25,16 @@ import 'package:breweries_for_the_world/features/nearby_breweries/data/repositor
     as _i392;
 import 'package:breweries_for_the_world/features/nearby_breweries/data/repositories/mapbox_directions_repository_impl.dart'
     as _i43;
+import 'package:breweries_for_the_world/features/nearby_breweries/data/services/url_launcher_website_launcher.dart'
+    as _i918;
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/repositories/brewery_repository.dart'
     as _i457;
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/repositories/brewery_route_repository.dart'
     as _i355;
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/repositories/location_repository.dart'
     as _i528;
+import 'package:breweries_for_the_world/features/nearby_breweries/domain/services/website_launcher.dart'
+    as _i490;
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/usecases/get_brewery_by_id.dart'
     as _i932;
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/usecases/get_brewery_page.dart'
@@ -43,10 +47,10 @@ import 'package:breweries_for_the_world/features/nearby_breweries/domain/usecase
     as _i915;
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/usecases/search_breweries.dart'
     as _i60;
-import 'package:breweries_for_the_world/features/nearby_breweries/presentation/bloc/brewery_catalog_bloc.dart'
-    as _i81;
-import 'package:breweries_for_the_world/features/nearby_breweries/presentation/bloc/nearby_breweries_bloc.dart'
-    as _i664;
+import 'package:breweries_for_the_world/features/nearby_breweries/presentation/bloc/brewery_catalog_bloc/brewery_catalog_bloc.dart'
+    as _i847;
+import 'package:breweries_for_the_world/features/nearby_breweries/presentation/bloc/nearby_breweries_bloc/nearby_breweries_bloc.dart'
+    as _i299;
 import 'package:dio/dio.dart' as _i361;
 import 'package:geolocator/geolocator.dart' as _i699;
 import 'package:get_it/get_it.dart' as _i174;
@@ -60,9 +64,13 @@ extension GetItInjectableX on _i174.GetIt {
   }) {
     final gh = _i526.GetItHelper(this, environment, environmentFilter);
     final externalDependenciesModule = _$ExternalDependenciesModule();
+    final useCasesModule = _$UseCasesModule();
     gh.lazySingleton<_i361.Dio>(() => externalDependenciesModule.dio);
     gh.lazySingleton<_i699.GeolocatorPlatform>(
       () => externalDependenciesModule.geolocatorPlatform,
+    );
+    gh.lazySingleton<_i490.WebsiteLauncher>(
+      () => _i918.UrlLauncherWebsiteLauncher(),
     );
     gh.lazySingleton<_i172.MapboxDirectionsRemoteDataSource>(
       () => externalDependenciesModule.mapboxDirectionsRemoteDataSource(
@@ -74,9 +82,6 @@ extension GetItInjectableX on _i174.GetIt {
       () => _i43.MapboxDirectionsRepositoryImpl(
         dataSource: gh<_i172.MapboxDirectionsRemoteDataSource>(),
       ),
-    );
-    gh.lazySingleton<_i770.GetBreweryRoute>(
-      () => _i770.GetBreweryRoute(gh<_i355.BreweryRouteRepository>()),
     );
     gh.lazySingleton<_i49.BreweryRemoteDataSource>(
       () => _i49.BreweryRemoteDataSourceImpl(dio: gh<_i361.Dio>()),
@@ -91,34 +96,37 @@ extension GetItInjectableX on _i174.GetIt {
         remoteDataSource: gh<_i49.BreweryRemoteDataSource>(),
       ),
     );
+    gh.lazySingleton<_i770.GetBreweryRoute>(
+      () => useCasesModule.getBreweryRoute(gh<_i355.BreweryRouteRepository>()),
+    );
     gh.lazySingleton<_i932.GetBreweryById>(
-      () => _i932.GetBreweryById(gh<_i457.BreweryRepository>()),
+      () => useCasesModule.getBreweryById(gh<_i457.BreweryRepository>()),
     );
     gh.lazySingleton<_i1050.GetBreweryPage>(
-      () => _i1050.GetBreweryPage(gh<_i457.BreweryRepository>()),
+      () => useCasesModule.getBreweryPage(gh<_i457.BreweryRepository>()),
     );
     gh.lazySingleton<_i915.GetNearestBreweries>(
-      () => _i915.GetNearestBreweries(gh<_i457.BreweryRepository>()),
+      () => useCasesModule.getNearestBreweries(gh<_i457.BreweryRepository>()),
     );
     gh.lazySingleton<_i60.SearchBreweries>(
-      () => _i60.SearchBreweries(gh<_i457.BreweryRepository>()),
+      () => useCasesModule.searchBreweries(gh<_i457.BreweryRepository>()),
     );
     gh.lazySingleton<_i528.LocationRepository>(
       () => _i392.LocationRepositoryImpl(
         dataSource: gh<_i225.LocationDataSource>(),
       ),
     );
-    gh.factory<_i81.BreweryCatalogBloc>(
-      () => _i81.BreweryCatalogBloc(
+    gh.factory<_i847.BreweryCatalogBloc>(
+      () => _i847.BreweryCatalogBloc(
         getBreweries: gh<_i1050.GetBreweryPage>(),
         searchBreweries: gh<_i60.SearchBreweries>(),
       ),
     );
     gh.lazySingleton<_i909.GetCurrentLocation>(
-      () => _i909.GetCurrentLocation(gh<_i528.LocationRepository>()),
+      () => useCasesModule.getCurrentLocation(gh<_i528.LocationRepository>()),
     );
-    gh.factory<_i664.NearbyBreweriesBloc>(
-      () => _i664.NearbyBreweriesBloc(
+    gh.factory<_i299.NearbyBreweriesBloc>(
+      () => _i299.NearbyBreweriesBloc(
         getNearestBreweries: gh<_i915.GetNearestBreweries>(),
         getCurrentLocation: gh<_i909.GetCurrentLocation>(),
         searchBreweries: gh<_i60.SearchBreweries>(),
@@ -129,3 +137,5 @@ extension GetItInjectableX on _i174.GetIt {
 }
 
 class _$ExternalDependenciesModule extends _i426.ExternalDependenciesModule {}
+
+class _$UseCasesModule extends _i426.UseCasesModule {}

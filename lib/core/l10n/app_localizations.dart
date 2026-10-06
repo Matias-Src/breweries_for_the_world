@@ -152,6 +152,12 @@ abstract class AppLocalizations {
   /// **'Could not load brewery details.'**
   String get breweryDetailsLoadError;
 
+  /// No description provided for @breweryNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'This brewery could not be found.'**
+  String get breweryNotFound;
+
   /// No description provided for @walking.
   ///
   /// In en, this message translates to:

@@ -1,76 +1,36 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:url_launcher/url_launcher.dart';
 
-import '../../domain/entities/brewery.dart';
-import '../../domain/entities/brewery_route.dart';
-import '../../domain/entities/route_mode.dart';
-import '../../domain/entities/user_location.dart';
-import '../../domain/usecases/get_brewery_by_id.dart';
-import '../../domain/usecases/get_brewery_route.dart';
+import '../../../domain/entities/brewery.dart';
+import '../../../domain/entities/brewery_route.dart';
+import '../../../domain/entities/route_mode.dart';
+import '../../../domain/entities/user_location.dart';
+import '../../../domain/errors/brewery_not_found_exception.dart';
+import '../../../domain/usecases/get_brewery_by_id.dart';
+import '../../../domain/usecases/get_brewery_route.dart';
+import '../../../domain/services/website_launcher.dart';
 
-enum BreweryDetailStatus { loading, success, error }
-
-class BreweryDetailState {
-  const BreweryDetailState({
-    required this.status,
-    this.brewery,
-    this.error,
-    this.selectedMode = RouteMode.walking,
-    this.route,
-    this.routeError,
-    this.isLoadingRoute = false,
-  });
-
-  final BreweryDetailStatus status;
-  final Brewery? brewery;
-  final Object? error;
-  final RouteMode selectedMode;
-  final BreweryRoute? route;
-  final Object? routeError;
-  final bool isLoadingRoute;
-
-  BreweryDetailState copyWith({
-    BreweryDetailStatus? status,
-    Brewery? brewery,
-    Object? error,
-    bool clearError = false,
-    RouteMode? selectedMode,
-    BreweryRoute? route,
-    bool clearRoute = false,
-    Object? routeError,
-    bool clearRouteError = false,
-    bool? isLoadingRoute,
-  }) => BreweryDetailState(
-    status: status ?? this.status,
-    brewery: brewery ?? this.brewery,
-    error: clearError ? null : error ?? this.error,
-    selectedMode: selectedMode ?? this.selectedMode,
-    route: clearRoute ? null : route ?? this.route,
-    routeError: clearRouteError ? null : routeError ?? this.routeError,
-    isLoadingRoute: isLoadingRoute ?? this.isLoadingRoute,
-  );
-}
+part 'brewery_detail_state.dart';
 
 class BreweryDetailCubit extends Cubit<BreweryDetailState> {
   BreweryDetailCubit({
     required this.breweryId,
     required GetBreweryById getBreweryById,
     required this.mapRoute,
+    required WebsiteLauncher websiteLauncher,
     this.userLocation,
     Brewery? initialBrewery,
   }) : _getBreweryById = getBreweryById,
+       _websiteLauncher = websiteLauncher,
        super(
-         BreweryDetailState(
-           status: initialBrewery == null
-               ? BreweryDetailStatus.loading
-               : BreweryDetailStatus.success,
-           brewery: initialBrewery,
-         ),
+         initialBrewery == null
+             ? const BreweryDetailLoading()
+             : BreweryDetailSuccess(brewery: initialBrewery),
        );
 
   final String breweryId;
   final GetBreweryById _getBreweryById;
   final GetBreweryRoute? mapRoute;
+  final WebsiteLauncher _websiteLauncher;
   final UserLocation? userLocation;
   int _routeRequestId = 0;
 
@@ -87,26 +47,35 @@ class BreweryDetailCubit extends Cubit<BreweryDetailState> {
   }
 
   Future<void> load() async {
-    if (state.brewery != null) {
+    if (state is BreweryDetailSuccess) {
       await requestRoute(state.selectedMode);
       return;
     }
 
-    emit(state.copyWith(status: BreweryDetailStatus.loading, clearError: true));
+    final selectedMode = state.selectedMode;
+    emit(BreweryDetailLoading(selectedMode: selectedMode));
     try {
       final brewery = await _getBreweryById(id: breweryId);
       if (isClosed) return;
+      emit(BreweryDetailSuccess(brewery: brewery, selectedMode: selectedMode));
+      await requestRoute(selectedMode);
+    } on BreweryNotFoundException catch (exception) {
+      if (isClosed) return;
       emit(
-        state.copyWith(
-          status: BreweryDetailStatus.success,
-          brewery: brewery,
-          clearError: true,
+        BreweryDetailEmpty(
+          breweryId: exception.breweryId,
+          selectedMode: selectedMode,
         ),
       );
-      await requestRoute(state.selectedMode);
     } on Exception catch (exception) {
       if (isClosed) return;
-      emit(state.copyWith(status: BreweryDetailStatus.error, error: exception));
+      emit(
+        BreweryDetailError(
+          breweryId: breweryId,
+          error: exception,
+          selectedMode: selectedMode,
+        ),
+      );
     }
   }
 
@@ -115,13 +84,14 @@ class BreweryDetailCubit extends Cubit<BreweryDetailState> {
   Future<void> retryRoute() => requestRoute(state.selectedMode);
 
   Future<void> requestRoute(RouteMode mode) async {
-    final brewery = state.brewery;
+    final currentState = state;
+    if (currentState is! BreweryDetailSuccess) return;
+    final brewery = currentState.brewery;
     final origin = userLocation;
     final getRoute = mapRoute;
-    final latitude = brewery?.latitude;
-    final longitude = brewery?.longitude;
-    if (brewery == null ||
-        origin == null ||
+    final latitude = brewery.latitude;
+    final longitude = brewery.longitude;
+    if (origin == null ||
         getRoute == null ||
         latitude == null ||
         longitude == null ||
@@ -131,7 +101,7 @@ class BreweryDetailCubit extends Cubit<BreweryDetailState> {
 
     final requestId = ++_routeRequestId;
     emit(
-      state.copyWith(
+      currentState.copyWith(
         selectedMode: mode,
         clearRoute: true,
         clearRouteError: true,
@@ -145,10 +115,14 @@ class BreweryDetailCubit extends Cubit<BreweryDetailState> {
         mode: mode,
       );
       if (isClosed || requestId != _routeRequestId) return;
-      emit(state.copyWith(route: route, isLoadingRoute: false));
+      final latestState = state;
+      if (latestState is! BreweryDetailSuccess) return;
+      emit(latestState.copyWith(route: route, isLoadingRoute: false));
     } on Exception catch (exception) {
       if (isClosed || requestId != _routeRequestId) return;
-      emit(state.copyWith(routeError: exception, isLoadingRoute: false));
+      final latestState = state;
+      if (latestState is! BreweryDetailSuccess) return;
+      emit(latestState.copyWith(routeError: exception, isLoadingRoute: false));
     }
   }
 
@@ -163,6 +137,6 @@ class BreweryDetailCubit extends Cubit<BreweryDetailState> {
         uri.host.isEmpty) {
       return;
     }
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
+    await _websiteLauncher.launch(uri);
   }
 }

@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:injectable/injectable.dart';
 
 import '../../domain/entities/brewery.dart';
+import '../../domain/errors/brewery_not_found_exception.dart';
 import '../../domain/errors/network_exception.dart';
 import '../../domain/errors/parsing_exception.dart';
 import '../../domain/errors/server_exception.dart';
@@ -22,6 +23,9 @@ class BreweryRepositoryImpl implements BreweryRepository {
       final brewery = await _remoteDataSource.getBreweryById(id: id);
       return brewery.toEntity();
     } on DioException catch (exception) {
+      if (exception.response?.statusCode == 404) {
+        throw BreweryNotFoundException(id);
+      }
       throw _mapDioException(exception);
     } on FormatException catch (exception) {
       throw ParsingException(exception.message);

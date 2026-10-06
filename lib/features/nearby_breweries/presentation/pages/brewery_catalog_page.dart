@@ -1,8 +1,8 @@
 import 'package:breweries_for_the_world/core/l10n/app_localizations.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/entities/brewery.dart';
-import 'package:breweries_for_the_world/features/nearby_breweries/presentation/bloc/brewery_catalog_bloc.dart';
-import 'package:breweries_for_the_world/features/nearby_breweries/presentation/bloc/brewery_catalog_event.dart';
-import 'package:breweries_for_the_world/features/nearby_breweries/presentation/bloc/brewery_catalog_state.dart';
+import 'package:breweries_for_the_world/features/nearby_breweries/presentation/bloc/brewery_catalog_bloc/brewery_catalog_bloc.dart';
+import 'package:breweries_for_the_world/features/nearby_breweries/presentation/bloc/brewery_catalog_bloc/brewery_catalog_event.dart';
+import 'package:breweries_for_the_world/features/nearby_breweries/presentation/bloc/brewery_catalog_bloc/brewery_catalog_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 

@@ -1,5 +1,4 @@
-import '../../domain/entities/brewery.dart';
-import '../../domain/entities/user_location.dart';
+part of 'nearby_breweries_bloc.dart';
 
 sealed class NearbyBreweriesState {
   const NearbyBreweriesState({

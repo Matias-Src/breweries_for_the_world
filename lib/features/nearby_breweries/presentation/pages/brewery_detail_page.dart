@@ -6,7 +6,7 @@ import '../../domain/entities/brewery.dart';
 import '../../domain/entities/brewery_route.dart';
 import '../../domain/entities/route_mode.dart';
 import '../../domain/entities/user_location.dart';
-import '../bloc/brewery_detail_cubit.dart';
+import '../bloc/brewery_detail_cubit/brewery_detail_cubit.dart';
 import '../formatters/brewery_address_formatter.dart';
 import '../map/brewery_map_adapter.dart';
 
@@ -19,88 +19,95 @@ class BreweryDetailPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return BlocBuilder<BreweryDetailCubit, BreweryDetailState>(
-      builder: (context, state) {
-        if (state.status == BreweryDetailStatus.loading) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
-        final brewery = state.brewery;
-        if (state.status == BreweryDetailStatus.error || brewery == null) {
-          return Scaffold(
-            appBar: AppBar(title: Text(l10n.breweryDetails)),
-            body: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(l10n.breweryDetailsLoadError),
-                  const SizedBox(height: 12),
-                  FilledButton.icon(
-                    onPressed: () => context.read<BreweryDetailCubit>().load(),
-                    icon: const Icon(Icons.refresh),
-                    label: Text(l10n.retry),
-                  ),
-                ],
-              ),
-            ),
-          );
-        }
-
-        final cubit = context.read<BreweryDetailCubit>();
-        final address = formatBreweryAddress(brewery);
-        final city = brewery.city?.trim();
-        final cityInAddress =
-            city != null &&
-            address != null &&
-            address.toLowerCase().contains(city.toLowerCase());
-        final canRequestRoute = cubit.canRequestRoute(brewery);
-
-        return Scaffold(
-          key: ValueKey('brewery-detail-view-${brewery.id}'),
+      builder: (context, state) => switch (state) {
+        BreweryDetailLoading() => const Scaffold(
+          body: Center(child: CircularProgressIndicator()),
+        ),
+        BreweryDetailEmpty() => Scaffold(
           appBar: AppBar(title: Text(l10n.breweryDetails)),
-          body: LayoutBuilder(
-            builder: (context, constraints) {
-              final panelHeight = constraints.maxHeight * 0.44;
-              return Stack(
-                fit: StackFit.expand,
-                children: [
-                  KeyedSubtree(
-                    key: const ValueKey('brewery-detail-map'),
-                    child: mapAdapter.buildBreweryMap(
-                      brewery: brewery,
-                      userLocation: cubit.userLocation,
-                      route: state.route,
-                      bottomPanelHeight: panelHeight,
-                    ),
-                  ),
-                  Align(
-                    alignment: Alignment.bottomCenter,
-                    child: SizedBox(
-                      width: double.infinity,
-                      height: panelHeight,
-                      child: _BreweryDetailPanel(
-                        brewery: brewery,
-                        address: address,
-                        city: city,
-                        cityInAddress: cityInAddress,
-                        hasCoordinates: _hasValidCoordinates(brewery),
-                        canRequestRoute: canRequestRoute,
-                        selectedMode: state.selectedMode,
-                        route: state.route,
-                        routeError: state.routeError,
-                        isLoadingRoute: state.isLoadingRoute,
-                        onModeChanged: cubit.selectMode,
-                        onRetry: cubit.retryRoute,
-                        onOpenWebsite: cubit.openWebsite,
-                      ),
-                    ),
-                  ),
-                ],
-              );
-            },
+          body: Center(child: Text(l10n.breweryNotFound)),
+        ),
+        BreweryDetailError() => Scaffold(
+          appBar: AppBar(title: Text(l10n.breweryDetails)),
+          body: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(l10n.breweryDetailsLoadError),
+                const SizedBox(height: 12),
+                FilledButton.icon(
+                  onPressed: () => context.read<BreweryDetailCubit>().load(),
+                  icon: const Icon(Icons.refresh),
+                  label: Text(l10n.retry),
+                ),
+              ],
+            ),
           ),
-        );
+        ),
+        BreweryDetailSuccess() => _buildSuccess(context, state, l10n),
       },
+    );
+  }
+
+  Widget _buildSuccess(
+    BuildContext context,
+    BreweryDetailSuccess state,
+    AppLocalizations l10n,
+  ) {
+    final brewery = state.brewery;
+    final cubit = context.read<BreweryDetailCubit>();
+    final address = formatBreweryAddress(brewery);
+    final city = brewery.city?.trim();
+    final cityInAddress =
+        city != null &&
+        address != null &&
+        address.toLowerCase().contains(city.toLowerCase());
+    final canRequestRoute = cubit.canRequestRoute(brewery);
+
+    return Scaffold(
+      key: ValueKey('brewery-detail-view-${brewery.id}'),
+      appBar: AppBar(title: Text(l10n.breweryDetails)),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final panelHeight = constraints.maxHeight * 0.44;
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              KeyedSubtree(
+                key: const ValueKey('brewery-detail-map'),
+                child: mapAdapter.buildBreweryMap(
+                  brewery: brewery,
+                  userLocation: cubit.userLocation,
+                  route: state.route,
+                  bottomPanelHeight: panelHeight,
+                ),
+              ),
+              Align(
+                alignment: Alignment.bottomCenter,
+                child: SizedBox(
+                  width: double.infinity,
+                  height: panelHeight,
+                  child: _BreweryDetailPanel(
+                    brewery: brewery,
+                    address: address,
+                    city: city,
+                    cityInAddress: cityInAddress,
+                    hasCoordinates: _hasValidCoordinates(brewery),
+                    canRequestRoute: canRequestRoute,
+                    selectedMode: state.selectedMode,
+                    route: state.route,
+                    routeError: state.routeError,
+                    isLoadingRoute: state.isLoadingRoute,
+                    onModeChanged: cubit.selectMode,
+                    onRetry: cubit.retryRoute,
+                    onOpenWebsite: cubit.openWebsite,
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 }

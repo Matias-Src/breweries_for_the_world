@@ -9,6 +9,7 @@
   "moreDetails": "Ver más detalles",
   "breweryDetails": "Detalles de la cervecería",
   "breweryDetailsLoadError": "No se pudieron cargar los detalles de la cervecería.",
+  "breweryNotFound": "No se encontró esta cervecería.",
   "walking": "A pie",
   "driving": "En auto",
   "locationUnavailable": "Ubicación no disponible",

@@ -6,13 +6,14 @@ import 'package:breweries_for_the_world/features/nearby_breweries/data/datasourc
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/repositories/brewery_route_repository.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/repositories/brewery_repository.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/repositories/location_repository.dart';
+import 'package:breweries_for_the_world/features/nearby_breweries/domain/services/website_launcher.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/usecases/get_brewery_route.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/usecases/get_brewery_page.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/usecases/get_current_location.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/usecases/get_nearest_breweries.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/usecases/search_breweries.dart';
-import 'package:breweries_for_the_world/features/nearby_breweries/presentation/bloc/nearby_breweries_bloc.dart';
-import 'package:breweries_for_the_world/features/nearby_breweries/presentation/bloc/brewery_catalog_bloc.dart';
+import 'package:breweries_for_the_world/features/nearby_breweries/presentation/bloc/nearby_breweries_bloc/nearby_breweries_bloc.dart';
+import 'package:breweries_for_the_world/features/nearby_breweries/presentation/bloc/brewery_catalog_bloc/brewery_catalog_bloc.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
@@ -36,13 +37,7 @@ void main() {
         config: const AppConfig(mapboxAccessToken: 'pk.test-token'),
       );
 
-      expect(
-        identical(
-          container<AppConfig>(),
-          container<AppConfig>(),
-        ),
-        isTrue,
-      );
+      expect(identical(container<AppConfig>(), container<AppConfig>()), isTrue);
       expect(
         container<Dio>().options.baseUrl,
         'https://api.openbrewerydb.org/v1',
@@ -62,6 +57,7 @@ void main() {
         isA<BreweryRouteRepository>(),
       );
       expect(container<LocationRepository>(), isA<LocationRepository>());
+      expect(container<WebsiteLauncher>(), isA<WebsiteLauncher>());
       expect(container<GetNearestBreweries>(), isA<GetNearestBreweries>());
       expect(container<GetBreweryPage>(), isA<GetBreweryPage>());
       expect(container<GetCurrentLocation>(), isA<GetCurrentLocation>());

@@ -1,3 +1,5 @@
+part of 'nearby_breweries_bloc.dart';
+
 sealed class NearbyBreweriesEvent {
   const NearbyBreweriesEvent();
 }

@@ -4,9 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../domain/entities/brewery.dart';
 import '../../domain/entities/user_location.dart';
-import '../bloc/nearby_breweries_bloc.dart';
-import '../bloc/nearby_breweries_event.dart';
-import '../bloc/nearby_breweries_state.dart';
+import '../bloc/nearby_breweries_bloc/nearby_breweries_bloc.dart';
 import 'brewery_map_adapter.dart';
 
 class NearbyBreweriesMapController {

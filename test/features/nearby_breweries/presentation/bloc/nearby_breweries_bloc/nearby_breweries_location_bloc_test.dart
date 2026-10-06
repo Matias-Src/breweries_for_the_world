@@ -6,9 +6,7 @@ import 'package:breweries_for_the_world/features/nearby_breweries/domain/reposit
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/repositories/location_repository.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/usecases/get_current_location.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/usecases/get_nearest_breweries.dart';
-import 'package:breweries_for_the_world/features/nearby_breweries/presentation/bloc/nearby_breweries_bloc.dart';
-import 'package:breweries_for_the_world/features/nearby_breweries/presentation/bloc/nearby_breweries_event.dart';
-import 'package:breweries_for_the_world/features/nearby_breweries/presentation/bloc/nearby_breweries_state.dart';
+import 'package:breweries_for_the_world/features/nearby_breweries/presentation/bloc/nearby_breweries_bloc/nearby_breweries_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 

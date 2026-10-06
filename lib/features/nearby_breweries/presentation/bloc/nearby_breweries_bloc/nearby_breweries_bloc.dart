@@ -2,14 +2,14 @@ import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:injectable/injectable.dart';
 
-import '../../domain/entities/brewery.dart';
-import '../../domain/entities/user_location.dart';
-import '../../domain/errors/location_unavailable_exception.dart';
-import '../../domain/usecases/get_current_location.dart';
-import '../../domain/usecases/get_nearest_breweries.dart';
-import '../../domain/usecases/search_breweries.dart';
-import 'nearby_breweries_event.dart';
-import 'nearby_breweries_state.dart';
+import '../../../domain/entities/brewery.dart';
+import '../../../domain/entities/user_location.dart';
+import '../../../domain/errors/location_unavailable_exception.dart';
+import '../../../domain/usecases/get_current_location.dart';
+import '../../../domain/usecases/get_nearest_breweries.dart';
+import '../../../domain/usecases/search_breweries.dart';
+part 'nearby_breweries_event.dart';
+part 'nearby_breweries_state.dart';
 
 @injectable
 class NearbyBreweriesBloc

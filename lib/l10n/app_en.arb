@@ -9,6 +9,7 @@
   "moreDetails": "More details",
   "breweryDetails": "Brewery details",
   "breweryDetailsLoadError": "Could not load brewery details.",
+  "breweryNotFound": "This brewery could not be found.",
   "walking": "Walk",
   "driving": "Drive",
   "locationUnavailable": "Location unavailable",
