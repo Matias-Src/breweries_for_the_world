@@ -133,6 +133,21 @@ class _MapboxMapSurfaceState extends State<_MapboxMapSurface> {
   PointAnnotation? _userLocationAnnotation;
   UserLocation? _lastUserLocation;
   String? _lastSelectedBreweryId;
+  String? _styleUri;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final brightness = Theme.of(context).brightness;
+    final styleUri = brightness == Brightness.dark
+        ? MapboxStyles.DARK
+        : MapboxStyles.LIGHT;
+    if (_styleUri == styleUri) return;
+
+    _styleUri = styleUri;
+    final map = _map;
+    if (map != null) unawaited(map.setStyleURI(styleUri));
+  }
 
   @override
   void didUpdateWidget(covariant _MapboxMapSurface oldWidget) {
@@ -404,7 +419,7 @@ class _MapboxMapSurfaceState extends State<_MapboxMapSurface> {
   Widget build(BuildContext context) {
     final camera = InitialMapCamera.resolve(widget.initialCameraLocation);
     return MapWidget(
-      styleUri: MapboxStyles.DARK,
+      styleUri: _styleUri!,
       viewport: CameraViewportState(
         center: _point(camera.center.latitude, camera.center.longitude),
         zoom: camera.zoom,

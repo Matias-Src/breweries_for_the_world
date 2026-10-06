@@ -9,10 +9,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:mapbox_maps_flutter_platform_interface/mapbox_maps_flutter_platform_interface_internal.dart';
 
 base class _RecordingMapboxPlatform extends MapboxMapsFlutterPlatform {
   final List<ViewportState?> viewports = [];
+  final List<String> styleUris = [];
 
   @override
   Widget buildView({
@@ -30,6 +32,7 @@ base class _RecordingMapboxPlatform extends MapboxMapsFlutterPlatform {
     bool? isOpaque = true,
   }) {
     viewports.add(viewport);
+    styleUris.add(styleUri);
     return const ColoredBox(color: Colors.black);
   }
 
@@ -38,6 +41,44 @@ base class _RecordingMapboxPlatform extends MapboxMapsFlutterPlatform {
 }
 
 void main() {
+  testWidgets('follows the app theme when selecting the map style', (
+    tester,
+  ) async {
+    final platform = _RecordingMapboxPlatform();
+    final previousPlatform = _installPlatform(platform);
+    addTearDown(() => _restorePlatform(previousPlatform));
+    final adapter = MapboxBreweryMapAdapter();
+    final themeMode = ValueNotifier(ThemeMode.dark);
+    addTearDown(themeMode.dispose);
+
+    await tester.pumpWidget(
+      ValueListenableBuilder<ThemeMode>(
+        valueListenable: themeMode,
+        builder: (context, mode, _) => MaterialApp(
+          themeMode: mode,
+          theme: ThemeData.light(),
+          darkTheme: ThemeData.dark(),
+          home: SizedBox.expand(
+            child: adapter.buildMap(
+              userLocation: null,
+              initialCameraLocation: null,
+              breweries: const [],
+              selectedBreweryId: null,
+              onBrewerySelected: (_) {},
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(platform.styleUris.last, MapboxStyles.DARK);
+
+    themeMode.value = ThemeMode.light;
+    await tester.pumpAndSettle();
+
+    expect(platform.styleUris.last, MapboxStyles.LIGHT);
+  });
+
   testWidgets('uses a regional center and non-global zoom without location', (
     tester,
   ) async {
