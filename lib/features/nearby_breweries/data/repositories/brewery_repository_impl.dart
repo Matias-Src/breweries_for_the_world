@@ -21,7 +21,7 @@ class BreweryRepositoryImpl implements BreweryRepository {
   Future<Brewery> getBreweryById({required String id}) async {
     try {
       final brewery = await _remoteDataSource.getBreweryById(id: id);
-      return brewery.toEntity();
+      return brewery;
     } on DioException catch (exception) {
       if (exception.response?.statusCode == 404) {
         throw BreweryNotFoundException(id);
@@ -42,7 +42,7 @@ class BreweryRepositoryImpl implements BreweryRepository {
         page: page,
         perPage: perPage,
       );
-      return breweries.map((brewery) => brewery.toEntity()).toList();
+      return breweries.map<Brewery>((brewery) => brewery).toList();
     } on DioException catch (exception) {
       throw _mapDioException(exception);
     } on FormatException catch (exception) {
@@ -65,9 +65,9 @@ class BreweryRepositoryImpl implements BreweryRepository {
         limit: limit,
       );
       return breweries
-          .map(
-            (brewery) => brewery.toEntity(
-              distanceKm: DistanceCalculator.calculateKm(
+          .map<Brewery>(
+            (brewery) => brewery.withDistanceKm(
+              DistanceCalculator.calculateKm(
                 startLatitude: latitude,
                 startLongitude: longitude,
                 endLatitude: brewery.latitude,
@@ -87,7 +87,7 @@ class BreweryRepositoryImpl implements BreweryRepository {
   Future<List<Brewery>> searchBreweries({required String query}) async {
     try {
       final breweries = await _remoteDataSource.searchBreweries(query: query);
-      return breweries.map((brewery) => brewery.toEntity()).toList();
+      return breweries.map<Brewery>((brewery) => brewery).toList();
     } on DioException catch (exception) {
       throw _mapDioException(exception);
     } on FormatException catch (exception) {

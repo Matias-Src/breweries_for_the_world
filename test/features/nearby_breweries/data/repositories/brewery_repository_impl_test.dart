@@ -1,5 +1,5 @@
 import 'package:breweries_for_the_world/features/nearby_breweries/data/datasources/brewery_remote_data_source.dart';
-import 'package:breweries_for_the_world/features/nearby_breweries/data/models/brewery_dto.dart';
+import 'package:breweries_for_the_world/features/nearby_breweries/data/models/brewery_model.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/data/repositories/brewery_repository_impl.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/entities/brewery.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/errors/brewery_not_found_exception.dart';
@@ -44,14 +44,15 @@ void main() {
     repository = BreweryRepositoryImpl(remoteDataSource: dataSource);
   });
 
-  test('loads a brewery by id and maps it into a domain entity', () async {
+  test('returns a brewery model through the domain repository', () async {
     when(
       () => dataSource.getBreweryById(id: 'brewery-42'),
-    ).thenAnswer((_) async => BreweryDto.fromJson(breweryJson));
+    ).thenAnswer((_) async => BreweryModel.fromJson(breweryJson));
 
     final brewery = await repository.getBreweryById(id: 'brewery-42');
 
     verify(() => dataSource.getBreweryById(id: 'brewery-42')).called(1);
+    expect(brewery, isA<BreweryModel>());
     expect(brewery.name, "'s");
     expect(brewery.city, 'Kronach');
   });
@@ -76,10 +77,10 @@ void main() {
     },
   );
 
-  test('maps a requested brewery page into domain entities', () async {
+  test('returns brewery models through the domain repository', () async {
     when(
       () => dataSource.getBreweries(page: 2, perPage: 20),
-    ).thenAnswer((_) async => [BreweryDto.fromJson(breweryJson)]);
+    ).thenAnswer((_) async => [BreweryModel.fromJson(breweryJson)]);
 
     final breweries = await repository.getBreweries(page: 2, perPage: 20);
 
@@ -96,7 +97,7 @@ void main() {
           longitude: longitude,
           limit: 40,
         ),
-      ).thenAnswer((_) async => [BreweryDto.fromJson(breweryJson)]);
+      ).thenAnswer((_) async => [BreweryModel.fromJson(breweryJson)]);
 
       final breweries = await repository.getNearestBreweries(
         latitude: latitude,
@@ -112,6 +113,8 @@ void main() {
       ).called(1);
       expect(breweries, hasLength(1));
       expect(breweries.single, isA<Brewery>());
+      expect(breweries.single, isA<BreweryModel>());
+      expect(breweries.single.distanceKm, 0);
       expect(breweries.single.name, "'s");
       expect(breweries.single.address1, 'Friesener Straße 1');
       expect(breweries.single.phone, '+49 9261 628000');
@@ -127,7 +130,7 @@ void main() {
             longitude: longitude,
             limit: 40,
           ),
-        ).thenAnswer((_) async => <BreweryDto>[]);
+        ).thenAnswer((_) async => <BreweryModel>[]);
 
         final breweries = await repository.getNearestBreweries(
           latitude: latitude,

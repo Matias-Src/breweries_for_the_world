@@ -1,4 +1,5 @@
-import 'package:breweries_for_the_world/features/nearby_breweries/data/models/brewery_dto.dart';
+import 'package:breweries_for_the_world/features/nearby_breweries/data/models/brewery_model.dart';
+import 'package:breweries_for_the_world/features/nearby_breweries/domain/entities/brewery.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -22,8 +23,9 @@ void main() {
   };
 
   test('maps brewery and full address fields from the API response', () {
-    final brewery = BreweryDto.fromJson(breweryJson).toEntity();
+    final brewery = BreweryModel.fromJson(breweryJson);
 
+    expect(brewery, isA<Brewery>());
     expect(brewery.id, 'ae7b3174-8be8-4d53-a3a5-9b8240970eea');
     expect(brewery.name, "'s");
     expect(brewery.breweryType, 'brewpub');
@@ -43,12 +45,12 @@ void main() {
   });
 
   test('keeps brewery data when coordinates are absent or invalid', () {
-    final withoutCoordinates = BreweryDto.fromJson({
+    final withoutCoordinates = BreweryModel.fromJson({
       ...breweryJson,
       'latitude': null,
       'longitude': null,
     });
-    final withInvalidCoordinates = BreweryDto.fromJson({
+    final withInvalidCoordinates = BreweryModel.fromJson({
       ...breweryJson,
       'latitude': 91,
       'longitude': 'not-a-coordinate',
@@ -64,15 +66,15 @@ void main() {
 
   test('rejects missing required API fields', () {
     expect(
-      () => BreweryDto.fromJson({...breweryJson}..remove('id')),
+      () => BreweryModel.fromJson({...breweryJson}..remove('id')),
       throwsFormatException,
     );
     expect(
-      () => BreweryDto.fromJson({...breweryJson}..remove('name')),
+      () => BreweryModel.fromJson({...breweryJson}..remove('name')),
       throwsFormatException,
     );
     expect(
-      () => BreweryDto.fromJson({...breweryJson}..remove('brewery_type')),
+      () => BreweryModel.fromJson({...breweryJson}..remove('brewery_type')),
       throwsFormatException,
     );
   });

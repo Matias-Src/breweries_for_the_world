@@ -1,24 +1,24 @@
 import 'package:dio/dio.dart';
 import 'package:injectable/injectable.dart';
 
-import '../models/brewery_dto.dart';
+import '../models/brewery_model.dart';
 
 abstract interface class BreweryRemoteDataSource {
-  Future<BreweryDto> getBreweryById({required String id});
+  Future<BreweryModel> getBreweryById({required String id});
 
-  Future<List<BreweryDto>> getBreweries({
+  Future<List<BreweryModel>> getBreweries({
     required int page,
     required int perPage,
   });
 
-  Future<List<BreweryDto>> getNearestBreweries({
+  Future<List<BreweryModel>> getNearestBreweries({
     required double latitude,
     required double longitude,
     int page = 1,
     required int limit,
   });
 
-  Future<List<BreweryDto>> searchBreweries({required String query});
+  Future<List<BreweryModel>> searchBreweries({required String query});
 }
 
 @LazySingleton(as: BreweryRemoteDataSource)
@@ -28,17 +28,17 @@ class BreweryRemoteDataSourceImpl implements BreweryRemoteDataSource {
   final Dio _dio;
 
   @override
-  Future<BreweryDto> getBreweryById({required String id}) async {
+  Future<BreweryModel> getBreweryById({required String id}) async {
     final response = await _dio.get<Map<String, dynamic>>('/breweries/$id');
     final brewery = response.data;
     if (brewery == null) {
       throw const FormatException('Brewery response is empty.');
     }
-    return BreweryDto.fromJson(brewery);
+    return BreweryModel.fromJson(brewery);
   }
 
   @override
-  Future<List<BreweryDto>> getBreweries({
+  Future<List<BreweryModel>> getBreweries({
     required int page,
     required int perPage,
   }) async {
@@ -50,7 +50,7 @@ class BreweryRemoteDataSourceImpl implements BreweryRemoteDataSource {
   }
 
   @override
-  Future<List<BreweryDto>> getNearestBreweries({
+  Future<List<BreweryModel>> getNearestBreweries({
     required double latitude,
     required double longitude,
     int page = 1,
@@ -68,7 +68,7 @@ class BreweryRemoteDataSourceImpl implements BreweryRemoteDataSource {
   }
 
   @override
-  Future<List<BreweryDto>> searchBreweries({required String query}) async {
+  Future<List<BreweryModel>> searchBreweries({required String query}) async {
     final response = await _dio.get<List<dynamic>>(
       '/breweries/search',
       queryParameters: {'query': query},
@@ -76,7 +76,7 @@ class BreweryRemoteDataSourceImpl implements BreweryRemoteDataSource {
     return _parseBreweries(response.data);
   }
 
-  List<BreweryDto> _parseBreweries(List<dynamic>? breweries) {
+  List<BreweryModel> _parseBreweries(List<dynamic>? breweries) {
     if (breweries == null) return const [];
 
     return breweries
@@ -86,7 +86,7 @@ class BreweryRemoteDataSourceImpl implements BreweryRemoteDataSource {
               'Brewery response item is not an object.',
             );
           }
-          return BreweryDto.fromJson(Map<String, dynamic>.from(json));
+          return BreweryModel.fromJson(Map<String, dynamic>.from(json));
         })
         .toList(growable: false);
   }

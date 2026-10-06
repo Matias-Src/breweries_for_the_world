@@ -26,10 +26,10 @@ Crear una pantalla de descubrimiento centrada en un mapa, inspirada en la fluide
 
 ### Data
 
-- `BreweryDto`: parseo de `id`, `name`, `brewery_type`, `city`, `address_1`, `phone`, `website_url`, `latitude` y `longitude`; validar coordenadas ausentes o inválidas sin descartar el resto de la cervecería.
+- `BreweryModel extends Brewery`: parseo de `id`, `name`, `brewery_type`, `city`, `address_1`, `phone`, `website_url`, `latitude` y `longitude`; validar coordenadas ausentes o inválidas sin descartar el resto de la cervecería.
 - `BreweryRemoteDataSource` sobre Dio: métodos para listado cercano (`by_dist={latitude},{longitude}&per_page=40`), búsqueda por nombre y detalle, usando OpenBreweryDB. Aplicar los filtros de tipo sin perder el orden por distancia y definir mediante prueba de contrato cómo combinar tipos múltiples con el parámetro `by_type`.
 - `LocationDataSource`: encapsular `geolocator`, permisos, servicio habilitado y posición actual; traducir errores de plataforma a resultados/errores tipados.
-- `BreweryRepositoryImpl`: mapear DTO a entidad y traducir fallos de Dio a excepciones de dominio tipadas (`NetworkException`, `ServerException`, `ParsingException` u otras acordadas). No ocultar errores.
+- `BreweryRepositoryImpl`: entregar los modelos, que extienden las entidades de dominio, y traducir fallos de Dio a excepciones tipadas (`NetworkException`, `ServerException`, `ParsingException` u otras acordadas). No ocultar errores.
 
 ### Domain
 
@@ -93,9 +93,9 @@ Añadir inglés (`en`) y español (`es`) mediante i18n, con un control accesible
 
 ### Tarea 1: Contratos API y distancia
 
-**RED:** añadir tests de `BreweryDto` que verifiquen todos los campos de dirección del ejemplo, coordenadas nulas/fuera de rango y campos obligatorios inválidos; testear con adaptador HTTP falso la ruta y los parámetros `by_dist` y `per_page=40`; cubrir respuesta inválida, errores de servidor y red. Añadir tests Haversine con distancias conocidas y coordenadas ausentes.
+**RED:** añadir tests de `BreweryModel` que verifiquen todos los campos de dirección del ejemplo, coordenadas nulas/fuera de rango, herencia de `Brewery` y campos obligatorios inválidos; testear con adaptador HTTP falso la ruta y los parámetros `by_dist` y `per_page=40`; cubrir respuesta inválida, errores de servidor y red. Añadir tests Haversine con distancias conocidas y coordenadas ausentes.
 
-**GREEN:** completar/ajustar DTO y datasource para que las entradas inválidas produzcan excepciones tipadas; calcular `distanceKm` desde la posición actual solo cuando ambas coordenadas sean válidas. Mantener el orden de cercanía de la API.
+**GREEN:** completar/ajustar el modelo y datasource para que las entradas inválidas produzcan excepciones tipadas; calcular `distanceKm` desde la posición actual solo cuando ambas coordenadas sean válidas. Mantener el orden de cercanía de la API.
 
 **Aceptación:** consultas verificables sin red real; los datos opcionales se preservan; no se calculan distancias con coordenadas inválidas; las fallas de red, HTTP y parseo se distinguen.
 
