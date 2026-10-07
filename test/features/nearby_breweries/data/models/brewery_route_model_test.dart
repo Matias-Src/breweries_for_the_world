@@ -1,6 +1,6 @@
 import 'package:breweries_for_the_world/features/nearby_breweries/data/models/brewery_route_model.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/entities/brewery_route.dart';
-import 'package:breweries_for_the_world/features/nearby_breweries/domain/entities/route_mode.dart';
+import 'package:breweries_for_the_world/features/nearby_breweries/domain/constants/route_mode.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/entities/user_location.dart';
 import 'package:flutter_test/flutter_test.dart';
 

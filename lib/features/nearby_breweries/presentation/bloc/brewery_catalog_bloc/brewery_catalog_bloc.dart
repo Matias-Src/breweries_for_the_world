@@ -12,8 +12,8 @@ import 'brewery_catalog_state.dart';
 class BreweryCatalogBloc
     extends Bloc<BreweryCatalogEvent, BreweryCatalogState> {
   BreweryCatalogBloc({
-    required GetBreweryPage getBreweries,
-    required SearchBreweries searchBreweries,
+    required GetBreweryPageUseCase getBreweries,
+    required SearchBreweriesUseCase searchBreweries,
     @ignoreParam this.pageSize = 20,
   }) : _getBreweries = getBreweries,
        _searchBreweries = searchBreweries,
@@ -33,8 +33,8 @@ class BreweryCatalogBloc
     on<BreweryCatalogSortChanged>(_onSortChanged);
   }
 
-  final GetBreweryPage _getBreweries;
-  final SearchBreweries _searchBreweries;
+  final GetBreweryPageUseCase _getBreweries;
+  final SearchBreweriesUseCase _searchBreweries;
   final int pageSize;
   static const _searchDebounce = Duration(milliseconds: 300);
 

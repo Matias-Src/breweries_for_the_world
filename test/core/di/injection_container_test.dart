@@ -7,6 +7,7 @@ import 'package:breweries_for_the_world/features/nearby_breweries/domain/reposit
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/repositories/brewery_repository.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/repositories/location_repository.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/services/website_launcher.dart';
+import 'package:breweries_for_the_world/features/nearby_breweries/domain/usecases/get_brewery_by_id.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/usecases/get_brewery_route.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/usecases/get_brewery_page.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/usecases/get_current_location.dart';
@@ -58,11 +59,12 @@ void main() {
       );
       expect(container<LocationRepository>(), isA<LocationRepository>());
       expect(container<WebsiteLauncher>(), isA<WebsiteLauncher>());
-      expect(container<GetNearestBreweries>(), isA<GetNearestBreweries>());
-      expect(container<GetBreweryPage>(), isA<GetBreweryPage>());
-      expect(container<GetCurrentLocation>(), isA<GetCurrentLocation>());
-      expect(container<SearchBreweries>(), isA<SearchBreweries>());
-      expect(container<GetBreweryRoute>(), isA<GetBreweryRoute>());
+      expect(container<GetBreweryByIdUseCase>(), isA<GetBreweryByIdUseCase>());
+      expect(container<GetNearestBreweriesUseCase>(), isA<GetNearestBreweriesUseCase>());
+      expect(container<GetBreweryPageUseCase>(), isA<GetBreweryPageUseCase>());
+      expect(container<GetCurrentLocationUseCase>(), isA<GetCurrentLocationUseCase>());
+      expect(container<SearchBreweriesUseCase>(), isA<SearchBreweriesUseCase>());
+      expect(container<GetBreweryRouteUseCase>(), isA<GetBreweryRouteUseCase>());
       expect(container<NearbyBreweriesBloc>(), isA<NearbyBreweriesBloc>());
       expect(container<BreweryCatalogBloc>(), isA<BreweryCatalogBloc>());
       expect(

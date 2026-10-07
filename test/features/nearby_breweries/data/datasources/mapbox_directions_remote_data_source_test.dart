@@ -1,5 +1,5 @@
 import 'package:breweries_for_the_world/features/nearby_breweries/data/datasources/mapbox_directions_remote_data_source.dart';
-import 'package:breweries_for_the_world/features/nearby_breweries/domain/entities/route_mode.dart';
+import 'package:breweries_for_the_world/features/nearby_breweries/domain/constants/route_mode.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/entities/user_location.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';

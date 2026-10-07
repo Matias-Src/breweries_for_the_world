@@ -15,9 +15,9 @@ part 'nearby_breweries_state.dart';
 class NearbyBreweriesBloc
     extends Bloc<NearbyBreweriesEvent, NearbyBreweriesState> {
   NearbyBreweriesBloc({
-    required GetNearestBreweries getNearestBreweries,
-    GetCurrentLocation? getCurrentLocation,
-    SearchBreweries? searchBreweries,
+    required GetNearestBreweriesUseCase getNearestBreweries,
+    GetCurrentLocationUseCase? getCurrentLocation,
+    SearchBreweriesUseCase? searchBreweries,
   }) : _getNearestBreweries = getNearestBreweries,
        _getCurrentLocation = getCurrentLocation,
        _searchBreweries = searchBreweries,
@@ -35,9 +35,9 @@ class NearbyBreweriesBloc
     on<BrewerySelected>(_onBrewerySelected);
   }
 
-  final GetNearestBreweries _getNearestBreweries;
-  final GetCurrentLocation? _getCurrentLocation;
-  final SearchBreweries? _searchBreweries;
+  final GetNearestBreweriesUseCase _getNearestBreweries;
+  final GetCurrentLocationUseCase? _getCurrentLocation;
+  final SearchBreweriesUseCase? _searchBreweries;
 
   static const _searchDebounce = Duration(milliseconds: 300);
   List<Brewery> _nearbyBreweries = const [];

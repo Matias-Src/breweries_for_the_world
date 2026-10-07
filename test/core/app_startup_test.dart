@@ -11,7 +11,7 @@ void main() {
       final steps = <String>[];
       final pendingNetworkRequest = Completer<void>();
 
-      await bootstrapApp(
+      await initializeApp(
         loadConfig: () async {
           steps.add('config');
           return const AppConfig(mapboxAccessToken: 'pk.test-token');
@@ -35,7 +35,7 @@ void main() {
     var appStarted = false;
 
     await expectLater(
-      bootstrapApp(
+      initializeApp(
         loadConfig: () => Future.error(StateError('Missing Mapbox token')),
         configureDependencies: (_) async {},
         runApp: () => appStarted = true,

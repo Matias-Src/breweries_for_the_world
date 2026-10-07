@@ -37,10 +37,10 @@ class BreweryDetailsExtra {
 class AppRouter {
   AppRouter({
     required BreweryMapAdapter mapAdapter,
-    required GetBreweryById getBreweryById,
+    required GetBreweryByIdUseCase getBreweryById,
     required WebsiteLauncher websiteLauncher,
     required BreweryCatalogBloc Function() createCatalogBloc,
-    GetBreweryRoute? getBreweryRoute,
+    GetBreweryRouteUseCase? getBreweryRoute,
     this.initialLocation = AppRoutes.nearby,
   }) : router = GoRouter(
          initialLocation: initialLocation,

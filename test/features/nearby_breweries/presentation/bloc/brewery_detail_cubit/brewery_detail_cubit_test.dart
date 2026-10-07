@@ -33,7 +33,7 @@ void main() {
     },
     build: () => BreweryDetailCubit(
       breweryId: 'missing',
-      getBreweryById: GetBreweryById(repository),
+      getBreweryById: GetBreweryByIdUseCase(repository),
       mapRoute: null,
       websiteLauncher: websiteLauncher,
     ),
@@ -52,7 +52,7 @@ void main() {
     when(() => websiteLauncher.launch(any())).thenAnswer((_) async {});
     final cubit = BreweryDetailCubit(
       breweryId: 'brewery-1',
-      getBreweryById: GetBreweryById(repository),
+      getBreweryById: GetBreweryByIdUseCase(repository),
       mapRoute: null,
       websiteLauncher: websiteLauncher,
     );

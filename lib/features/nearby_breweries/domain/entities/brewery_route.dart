@@ -1,5 +1,5 @@
 import 'user_location.dart';
-import 'route_mode.dart';
+import '../constants/route_mode.dart';
 
 class BreweryRoute {
   const BreweryRoute({

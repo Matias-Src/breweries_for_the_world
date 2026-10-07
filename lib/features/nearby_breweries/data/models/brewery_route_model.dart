@@ -1,5 +1,5 @@
 import '../../domain/entities/brewery_route.dart';
-import '../../domain/entities/route_mode.dart';
+import '../../domain/constants/route_mode.dart';
 import '../../domain/entities/user_location.dart';
 
 class BreweryRouteModel extends BreweryRoute {

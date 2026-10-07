@@ -2,7 +2,7 @@
 
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/entities/brewery.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/entities/brewery_route.dart';
-import 'package:breweries_for_the_world/features/nearby_breweries/domain/entities/route_mode.dart';
+import 'package:breweries_for_the_world/features/nearby_breweries/domain/constants/route_mode.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/domain/entities/user_location.dart';
 import 'package:breweries_for_the_world/features/nearby_breweries/presentation/map/mapbox_brewery_map_adapter.dart';
 import 'package:flutter/foundation.dart';

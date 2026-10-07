@@ -14,8 +14,8 @@ class MockBreweryRepository extends Mock implements BreweryRepository {}
 
 void main() {
   late MockBreweryRepository repository;
-  late GetNearestBreweries getNearestBreweries;
-  late SearchBreweries searchBreweries;
+  late GetNearestBreweriesUseCase getNearestBreweries;
+  late SearchBreweriesUseCase searchBreweries;
   late Completer<List<Brewery>> oldSearch;
   late Completer<List<Brewery>> newSearch;
 
@@ -34,8 +34,8 @@ void main() {
 
   setUp(() {
     repository = MockBreweryRepository();
-    getNearestBreweries = GetNearestBreweries(repository);
-    searchBreweries = SearchBreweries(repository);
+    getNearestBreweries = GetNearestBreweriesUseCase(repository);
+    searchBreweries = SearchBreweriesUseCase(repository);
   });
 
   blocTest<NearbyBreweriesBloc, NearbyBreweriesState>(

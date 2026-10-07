@@ -11,7 +11,7 @@ class MockBreweryRepository extends Mock implements BreweryRepository {}
 
 void main() {
   late MockBreweryRepository repository;
-  late GetNearestBreweries getNearestBreweries;
+  late GetNearestBreweriesUseCase getNearestBreweries;
 
   const latitude = 50.241246;
   const longitude = 11.327765;
@@ -32,7 +32,7 @@ void main() {
 
   setUp(() {
     repository = MockBreweryRepository();
-    getNearestBreweries = GetNearestBreweries(repository);
+    getNearestBreweries = GetNearestBreweriesUseCase(repository);
   });
 
   blocTest<NearbyBreweriesBloc, NearbyBreweriesState>(

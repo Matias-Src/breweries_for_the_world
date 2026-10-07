@@ -20,11 +20,11 @@ void main() {
     final appRouter = AppRouter(
       initialLocation: '/breweries/route-brewery',
       mapAdapter: _EmptyMapAdapter(),
-      getBreweryById: GetBreweryById(repository),
+      getBreweryById: GetBreweryByIdUseCase(repository),
       websiteLauncher: _EmptyWebsiteLauncher(),
       createCatalogBloc: () => BreweryCatalogBloc(
-        getBreweries: GetBreweryPage(repository),
-        searchBreweries: SearchBreweries(repository),
+        getBreweries: GetBreweryPageUseCase(repository),
+        searchBreweries: SearchBreweriesUseCase(repository),
       ),
     );
     addTearDown(appRouter.dispose);
@@ -43,11 +43,11 @@ void main() {
     final appRouter = AppRouter(
       initialLocation: '/breweries',
       mapAdapter: _EmptyMapAdapter(),
-      getBreweryById: GetBreweryById(repository),
+      getBreweryById: GetBreweryByIdUseCase(repository),
       websiteLauncher: _EmptyWebsiteLauncher(),
       createCatalogBloc: () => BreweryCatalogBloc(
-        getBreweries: GetBreweryPage(repository),
-        searchBreweries: SearchBreweries(repository),
+        getBreweries: GetBreweryPageUseCase(repository),
+        searchBreweries: SearchBreweriesUseCase(repository),
       ),
     );
     addTearDown(appRouter.dispose);

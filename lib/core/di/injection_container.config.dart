@@ -96,19 +96,19 @@ extension GetItInjectableX on _i174.GetIt {
         remoteDataSource: gh<_i49.BreweryRemoteDataSource>(),
       ),
     );
-    gh.lazySingleton<_i770.GetBreweryRoute>(
+    gh.lazySingleton<_i770.GetBreweryRouteUseCase>(
       () => useCasesModule.getBreweryRoute(gh<_i355.BreweryRouteRepository>()),
     );
-    gh.lazySingleton<_i932.GetBreweryById>(
+    gh.lazySingleton<_i932.GetBreweryByIdUseCase>(
       () => useCasesModule.getBreweryById(gh<_i457.BreweryRepository>()),
     );
-    gh.lazySingleton<_i1050.GetBreweryPage>(
+    gh.lazySingleton<_i1050.GetBreweryPageUseCase>(
       () => useCasesModule.getBreweryPage(gh<_i457.BreweryRepository>()),
     );
-    gh.lazySingleton<_i915.GetNearestBreweries>(
+    gh.lazySingleton<_i915.GetNearestBreweriesUseCase>(
       () => useCasesModule.getNearestBreweries(gh<_i457.BreweryRepository>()),
     );
-    gh.lazySingleton<_i60.SearchBreweries>(
+    gh.lazySingleton<_i60.SearchBreweriesUseCase>(
       () => useCasesModule.searchBreweries(gh<_i457.BreweryRepository>()),
     );
     gh.lazySingleton<_i528.LocationRepository>(
@@ -116,20 +116,20 @@ extension GetItInjectableX on _i174.GetIt {
         dataSource: gh<_i225.LocationDataSource>(),
       ),
     );
-    gh.factory<_i847.BreweryCatalogBloc>(
-      () => _i847.BreweryCatalogBloc(
-        getBreweries: gh<_i1050.GetBreweryPage>(),
-        searchBreweries: gh<_i60.SearchBreweries>(),
-      ),
-    );
-    gh.lazySingleton<_i909.GetCurrentLocation>(
-      () => useCasesModule.getCurrentLocation(gh<_i528.LocationRepository>()),
-    );
     gh.factory<_i299.NearbyBreweriesBloc>(
       () => _i299.NearbyBreweriesBloc(
-        getNearestBreweries: gh<_i915.GetNearestBreweries>(),
-        getCurrentLocation: gh<_i909.GetCurrentLocation>(),
-        searchBreweries: gh<_i60.SearchBreweries>(),
+        getNearestBreweries: gh<_i915.GetNearestBreweriesUseCase>(),
+        getCurrentLocation: gh<_i909.GetCurrentLocationUseCase>(),
+        searchBreweries: gh<_i60.SearchBreweriesUseCase>(),
+      ),
+    );
+    gh.lazySingleton<_i909.GetCurrentLocationUseCase>(
+      () => useCasesModule.getCurrentLocation(gh<_i528.LocationRepository>()),
+    );
+    gh.factory<_i847.BreweryCatalogBloc>(
+      () => _i847.BreweryCatalogBloc(
+        getBreweries: gh<_i1050.GetBreweryPageUseCase>(),
+        searchBreweries: gh<_i60.SearchBreweriesUseCase>(),
       ),
     );
     return this;

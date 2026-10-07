@@ -2,7 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:injectable/injectable.dart';
 
 import '../../domain/entities/brewery_route.dart';
-import '../../domain/entities/route_mode.dart';
+import '../../domain/constants/route_mode.dart';
 import '../../domain/entities/user_location.dart';
 import '../../domain/errors/network_exception.dart';
 import '../../domain/errors/parsing_exception.dart';

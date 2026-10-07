@@ -36,8 +36,8 @@ void main() {
       ).thenAnswer((_) async => firstPageBreweries);
     },
     build: () => BreweryCatalogBloc(
-      getBreweries: GetBreweryPage(repository),
-      searchBreweries: SearchBreweries(repository),
+      getBreweries: GetBreweryPageUseCase(repository),
+      searchBreweries: SearchBreweriesUseCase(repository),
       pageSize: 2,
     ),
     act: (bloc) => bloc.add(const BreweryCatalogStarted()),
@@ -67,8 +67,8 @@ void main() {
       ).thenAnswer((_) async => secondPageBreweries);
     },
     build: () => BreweryCatalogBloc(
-      getBreweries: GetBreweryPage(repository),
-      searchBreweries: SearchBreweries(repository),
+      getBreweries: GetBreweryPageUseCase(repository),
+      searchBreweries: SearchBreweriesUseCase(repository),
       pageSize: 2,
     ),
     act: (bloc) async {
@@ -114,8 +114,8 @@ void main() {
       );
     },
     build: () => BreweryCatalogBloc(
-      getBreweries: GetBreweryPage(repository),
-      searchBreweries: SearchBreweries(repository),
+      getBreweries: GetBreweryPageUseCase(repository),
+      searchBreweries: SearchBreweriesUseCase(repository),
       pageSize: 4,
     ),
     act: (bloc) async {
@@ -180,8 +180,8 @@ void main() {
       );
     },
     build: () => BreweryCatalogBloc(
-      getBreweries: GetBreweryPage(repository),
-      searchBreweries: SearchBreweries(repository),
+      getBreweries: GetBreweryPageUseCase(repository),
+      searchBreweries: SearchBreweriesUseCase(repository),
     ),
     act: (bloc) => bloc.add(const BreweryCatalogSearchChanged('stone')),
     wait: const Duration(milliseconds: 350),
@@ -211,8 +211,8 @@ void main() {
       ).thenAnswer((_) async => const []);
     },
     build: () => BreweryCatalogBloc(
-      getBreweries: GetBreweryPage(repository),
-      searchBreweries: SearchBreweries(repository),
+      getBreweries: GetBreweryPageUseCase(repository),
+      searchBreweries: SearchBreweriesUseCase(repository),
     ),
     act: (bloc) => bloc.add(const BreweryCatalogSearchChanged('unknown')),
     wait: const Duration(milliseconds: 350),
@@ -233,8 +233,8 @@ void main() {
   blocTest<BreweryCatalogBloc, BreweryCatalogState>(
     'does not replace latest search results when an older response completes',
     build: () => BreweryCatalogBloc(
-      getBreweries: GetBreweryPage(repository),
-      searchBreweries: SearchBreweries(repository),
+      getBreweries: GetBreweryPageUseCase(repository),
+      searchBreweries: SearchBreweriesUseCase(repository),
     ),
     act: (bloc) async {
       final oldSearch = Completer<List<Brewery>>();

@@ -1,8 +1,8 @@
 import '../entities/brewery.dart';
 import '../repositories/brewery_repository.dart';
 
-class GetBreweryById {
-  const GetBreweryById(this._repository);
+class GetBreweryByIdUseCase {
+  const GetBreweryByIdUseCase(this._repository);
 
   final BreweryRepository _repository;
 

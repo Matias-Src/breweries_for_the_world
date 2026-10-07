@@ -1,5 +1,5 @@
 import '../entities/brewery_route.dart';
-import '../entities/route_mode.dart';
+import '../constants/route_mode.dart';
 import '../entities/user_location.dart';
 
 abstract interface class BreweryRouteRepository {

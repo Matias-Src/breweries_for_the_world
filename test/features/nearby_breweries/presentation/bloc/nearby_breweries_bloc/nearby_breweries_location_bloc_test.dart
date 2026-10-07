@@ -17,8 +17,8 @@ class MockLocationRepository extends Mock implements LocationRepository {}
 void main() {
   late MockBreweryRepository breweryRepository;
   late MockLocationRepository locationRepository;
-  late GetNearestBreweries getNearestBreweries;
-  late GetCurrentLocation getCurrentLocation;
+  late GetNearestBreweriesUseCase getNearestBreweries;
+  late GetCurrentLocationUseCase getCurrentLocation;
 
   const location = UserLocation(latitude: 50.241246, longitude: 11.327765);
   const brewery = Brewery(
@@ -32,8 +32,8 @@ void main() {
   setUp(() {
     breweryRepository = MockBreweryRepository();
     locationRepository = MockLocationRepository();
-    getNearestBreweries = GetNearestBreweries(breweryRepository);
-    getCurrentLocation = GetCurrentLocation(locationRepository);
+    getNearestBreweries = GetNearestBreweriesUseCase(breweryRepository);
+    getCurrentLocation = GetCurrentLocationUseCase(locationRepository);
   });
 
   blocTest<NearbyBreweriesBloc, NearbyBreweriesState>(

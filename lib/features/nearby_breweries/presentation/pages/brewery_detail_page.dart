@@ -4,7 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/l10n/app_localizations.dart';
 import '../../domain/entities/brewery.dart';
 import '../../domain/entities/brewery_route.dart';
-import '../../domain/entities/route_mode.dart';
+import '../../domain/constants/route_mode.dart';
 import '../../domain/entities/user_location.dart';
 import '../bloc/brewery_detail_cubit/brewery_detail_cubit.dart';
 import '../formatters/brewery_address_formatter.dart';

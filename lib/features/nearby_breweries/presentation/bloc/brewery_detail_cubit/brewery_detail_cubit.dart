@@ -2,7 +2,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../domain/entities/brewery.dart';
 import '../../../domain/entities/brewery_route.dart';
-import '../../../domain/entities/route_mode.dart';
+import '../../../domain/constants/route_mode.dart';
 import '../../../domain/entities/user_location.dart';
 import '../../../domain/errors/brewery_not_found_exception.dart';
 import '../../../domain/usecases/get_brewery_by_id.dart';
@@ -14,7 +14,7 @@ part 'brewery_detail_state.dart';
 class BreweryDetailCubit extends Cubit<BreweryDetailState> {
   BreweryDetailCubit({
     required this.breweryId,
-    required GetBreweryById getBreweryById,
+    required GetBreweryByIdUseCase getBreweryById,
     required this.mapRoute,
     required WebsiteLauncher websiteLauncher,
     this.userLocation,
@@ -28,8 +28,8 @@ class BreweryDetailCubit extends Cubit<BreweryDetailState> {
        );
 
   final String breweryId;
-  final GetBreweryById _getBreweryById;
-  final GetBreweryRoute? mapRoute;
+  final GetBreweryByIdUseCase _getBreweryById;
+  final GetBreweryRouteUseCase? mapRoute;
   final WebsiteLauncher _websiteLauncher;
   final UserLocation? userLocation;
   int _routeRequestId = 0;

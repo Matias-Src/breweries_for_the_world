@@ -51,26 +51,26 @@ abstract class ExternalDependenciesModule {
 @module
 abstract class UseCasesModule {
   @lazySingleton
-  GetBreweryById getBreweryById(BreweryRepository repository) =>
-      GetBreweryById(repository);
+  GetBreweryByIdUseCase getBreweryById(BreweryRepository repository) =>
+      GetBreweryByIdUseCase(repository);
 
   @lazySingleton
-  GetBreweryPage getBreweryPage(BreweryRepository repository) =>
-      GetBreweryPage(repository);
+  GetBreweryPageUseCase getBreweryPage(BreweryRepository repository) =>
+      GetBreweryPageUseCase(repository);
 
   @lazySingleton
-  GetBreweryRoute getBreweryRoute(BreweryRouteRepository repository) =>
-      GetBreweryRoute(repository);
+  GetBreweryRouteUseCase getBreweryRoute(BreweryRouteRepository repository) =>
+      GetBreweryRouteUseCase(repository);
 
   @lazySingleton
-  GetCurrentLocation getCurrentLocation(LocationRepository repository) =>
-      GetCurrentLocation(repository);
+  GetCurrentLocationUseCase getCurrentLocation(LocationRepository repository) =>
+      GetCurrentLocationUseCase(repository);
 
   @lazySingleton
-  GetNearestBreweries getNearestBreweries(BreweryRepository repository) =>
-      GetNearestBreweries(repository);
+  GetNearestBreweriesUseCase getNearestBreweries(BreweryRepository repository) =>
+      GetNearestBreweriesUseCase(repository);
 
   @lazySingleton
-  SearchBreweries searchBreweries(BreweryRepository repository) =>
-      SearchBreweries(repository);
+  SearchBreweriesUseCase searchBreweries(BreweryRepository repository) =>
+      SearchBreweriesUseCase(repository);
 }

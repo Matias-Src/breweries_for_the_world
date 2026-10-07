@@ -1,8 +1,8 @@
 import '../entities/brewery.dart';
 import '../repositories/brewery_repository.dart';
 
-class GetNearestBreweries {
-  const GetNearestBreweries(this._repository);
+class GetNearestBreweriesUseCase {
+  const GetNearestBreweriesUseCase(this._repository);
 
   final BreweryRepository _repository;
 
